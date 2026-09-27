@@ -41,73 +41,49 @@ def guardar_binance(datos):
     with open(ARCHIVO_BINANCE, "w", encoding="utf-8") as f:
         json.dump(datos, f, indent=4, ensure_ascii=False)
 
-# Configuración de la página web para PC y teléfono con forzado de modo oscuro
-st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide", initial_sidebar_state="expanded")
+# Configuración de la página web
+st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide")
 
-# Estilos CSS avanzados para forzar modo oscuro elegante y diseño de factura profesional
+# Estilos CSS limpios, profesionales y diseño de factura nítido para captures
 st.markdown("""
     <style>
-        /* Forzar tema oscuro general en PC y teléfono */
-        .stApp {
-            background-color: #0e1117;
-            color: #ffffff;
-        }
-        sidebar .stApp {
-            background-color: #161a23;
-        }
-        .stButton>button {
-            background-color: #1a1a1a;
-            color: #d4af37;
-            border-radius: 8px;
-            border: 1px solid #d4af37;
-            font-weight: bold;
-        }
-        .stButton>button:hover {
-            background-color: #d4af37;
-            color: #1a1a1a;
-            border-color: #ffffff;
-        }
-        /* Estilo de Factura Profesional tipo PDF */
-        .invoice-container {
-            background-color: #1e222b;
-            color: #f0f2f6;
+        .invoice-card {
+            background-color: #ffffff;
+            color: #111111;
             padding: 30px;
-            border-radius: 12px;
-            border: 1px solid #d4af37;
+            border-radius: 10px;
+            border: 2px solid #111111;
             font-family: Arial, sans-serif;
-            max-width: 600px;
+            max-width: 500px;
             margin: auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         .invoice-header {
             display: flex;
             justify-content: space-between;
-            border-bottom: 2px solid #d4af37;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            border-bottom: 2px solid #111111;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
         }
         .invoice-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 10px;
             margin-bottom: 15px;
         }
         .invoice-table th {
-            background-color: #2b313c;
-            color: #d4af37;
-            padding: 10px;
+            background-color: #f1f3f5;
+            color: #111111;
+            padding: 8px;
             text-align: left;
-            font-size: 14px;
+            font-size: 13px;
+            border-bottom: 1px solid #ddd;
         }
         .invoice-table td {
-            padding: 10px;
-            border-bottom: 1px solid #2b313c;
-            font-size: 14px;
-        }
-        .invoice-totals {
-            text-align: right;
-            margin-top: 15px;
-            font-size: 16px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            color: #333333;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -125,18 +101,18 @@ with st.sidebar:
         st.markdown("## 🔥 LUIS STORE")
     
     st.markdown("---")
-    menu = st.selectbox("Menú Principal", [
+    menu = st.sidebar.selectbox("Menú Principal", [
         "🛒 Registrar Venta", 
         "📦 Módulo de Inventario (Tallas y Stock)", 
         "➕ Agregar Nuevo Producto / Talla", 
         "✏️ Editar / Eliminar / Fotos (Inventario)", 
-        "📋 Cuentas por Cobrar (Fiados)", 
+        "📋 Cuentas por Cobrar (Cuotas)", 
         "🟡 Fondos Disponibles en Binance",
         "📊 Historial, Facturación & Finanzas"
     ])
 
 st.title("🔥 LUIS STORE — Control de Inventario & Ventas")
-st.markdown("Administra tus prendas, tallas, stock, precios a $ BCV, Binance y genera facturas digitales profesionales.")
+st.markdown("Administra tus prendas, tallas, stock, precios a $ a BCV, Binance y genera facturas digitales profesionales.")
 
 # ---------------------------------------------------------
 # 1. REGISTRAR VENTA
@@ -158,7 +134,7 @@ if menu == "🛒 Registrar Venta":
         
         cantidad = st.number_input("Cantidad a vender:", min_value=1, max_value=max(1, producto['stock']), step=1)
         
-        tipo_pago = st.radio("Condición de pago:", ["Contado (Pagado de una vez)", "Fiado (Quedó pendiente)"])
+        tipo_pago = st.radio("Condición de pago:", ["Contado (Pagado de una vez)", "Venta por Cuotas (Pendiente)"])
         
         cliente = "Contado"
         fecha_entrega = str(date.today())
@@ -168,19 +144,19 @@ if menu == "🛒 Registrar Venta":
         precio_final_usdt = producto['precio_usdt']
         precio_final_bcv = producto.get('precio_bcv', 0)
         
-        if "Fiado" in tipo_pago:
-            cliente = st.text_input("Nombre del Cliente (para la cuenta por cobrar):", value="")
+        if "Cuotas" in tipo_pago:
+            cliente = st.text_input("Nombre del Cliente:", value="")
             if not cliente.strip():
                 cliente = "Cliente General"
             
-            st.markdown("### 💰 Precios Especiales para Fiado")
+            st.markdown("### 💰 Precios Especiales para Venta por Cuotas")
             col_p1, col_p2 = st.columns(2)
             with col_p1:
-                precio_final_usdt = st.number_input("Precio interno USDT (Fiado):", min_value=0.0, value=float(producto['precio_usdt']), step=0.5)
+                precio_final_usdt = st.number_input("Precio interno USDT:", min_value=0.0, value=float(producto['precio_usdt']), step=0.5)
             with col_p2:
-                precio_final_bcv = st.number_input("Precio oficial $ a BCV (Fiado):", min_value=0.0, value=float(producto.get('precio_bcv', 0)), step=0.5)
+                precio_final_bcv = st.number_input("Precio oficial $ a BCV:", min_value=0.0, value=float(producto.get('precio_bcv', 0)), step=0.5)
             
-            st.markdown("### 📅 Fechas y Cuotas del Fiado")
+            st.markdown("### 📅 Fechas y Cuotas")
             fecha_entrega_obj = st.date_input("Fecha de Entrega del Producto:", value=date.today())
             fecha_entrega = str(fecha_entrega_obj)
                 
@@ -215,7 +191,7 @@ if menu == "🛒 Registrar Venta":
                 ganancia_usdt = total_venta_usdt - inversion_total
                 reinversion_usdt = inversion_total
                 
-                estado = "FIADO (Pendiente)" if "Fiado" in tipo_pago else "PAGADO"
+                estado = "CUOTAS (Pendiente)" if "Cuotas" in tipo_pago else "PAGADO"
                 
                 if not detalle_cuotas:
                     detalle_cuotas = [{
@@ -260,26 +236,25 @@ if menu == "🛒 Registrar Venta":
                 guardar_datos(ARCHIVO_VENTAS, ventas)
                 
                 st.success("✅ ¡Venta registrada exitosamente!")
-                st.metric("Total Venta ($ a BCV)", f"${total_venta_bcv:.2f} a BCV")
                 
-                # Factura Estilo Profesional ($ a BCV)
+                # Factura Limpia Estilo Profesional (Lista para capture)
                 st.markdown("---")
-                st.markdown("### 🧾 Factura Digital Profesional")
+                st.markdown("### 🧾 Factura Digital (Tómale capture para WhatsApp)")
                 
                 unitario_bcv = precio_final_bcv
                 factura_html = f"""
-                <div class="invoice-container">
+                <div class="invoice-card">
                     <div class="invoice-header">
                         <div>
-                            <h2 style="margin:0; color:#d4af37;">LUIS STORE</h2>
-                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
+                            <h2 style="margin:0; color:#111111; font-size:20px;">LUIS STORE</h2>
+                            <p style="margin:4px 0 0 0; font-size:12px; color:#555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
                         </div>
                         <div style="text-align: right;">
-                            <h3 style="margin:0; color:#fff;">FACTURA</h3>
-                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">N°: #{venta_reg['id_venta']}<br>Fecha: {fecha_entrega}</p>
+                            <h3 style="margin:0; color:#111111; font-size:16px;">FACTURA</h3>
+                            <p style="margin:4px 0 0 0; font-size:12px; color:#555;">N°: #{venta_reg['id_venta']}<br>Fecha: {fecha_entrega}</p>
                         </div>
                     </div>
-                    <p style="margin-bottom:15px; font-size:14px;"><b>Cliente:</b> {cliente}</p>
+                    <p style="margin-bottom:10px; font-size:13px; color:#333;"><b>Cliente:</b> {cliente}</p>
                     <table class="invoice-table">
                         <tr>
                             <th>Cant</th>
@@ -294,19 +269,18 @@ if menu == "🛒 Registrar Venta":
                             <td><b>${total_venta_bcv:.2f}</b></td>
                         </tr>
                     </table>
-                    <div class="invoice-totals">
-                        <p style="margin:5px 0;"><b>Estado:</b> {estado}</p>
-                        <h2 style="color:#00ffcc; margin:10px 0;">TOTAL A PAGAR: ${total_venta_bcv:.2f} a BCV</h2>
+                    <div style="text-align: right; margin-top:10px;">
+                        <p style="margin:3px 0; font-size:13px; color:#333;"><b>Condición:</b> {estado}</p>
+                        <h3 style="color:#d4af37; margin:5px 0;">TOTAL A PAGAR: ${total_venta_bcv:.2f} a BCV</h3>
                     </div>
-                    <hr style="border-color:#333; margin:20px 0;">
-                    <div style="text-align: center; font-size: 12px; color: #d4af37;">
+                    <hr style="border:0; border-top:1px solid #ddd; margin:15px 0;">
+                    <div style="text-align: center; font-size: 11px; color: #666;">
                         Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
                         <b>¡Gracias por tu compra en Luis Store!</b>
                     </div>
                 </div>
                 """
                 st.markdown(factura_html, unsafe_allow_html=True)
-                st.info("💡 Tómale captura de pantalla a esta factura y envíasela al cliente por WhatsApp.")
 
 # ---------------------------------------------------------
 # 2. MÓDULO DE INVENTARIO
@@ -480,22 +454,22 @@ elif menu == "🟡 Fondos Disponibles en Binance":
         st.dataframe(df_movs)
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (FIADOS)
+# 6. CUENTAS POR COBRAR (CUOTAS)
 # ---------------------------------------------------------
-elif menu == "📋 Cuentas por Cobrar (Fiados)":
-    st.subheader("📋 Cuentas Pendientes por Cobrar (Fiados)")
+elif menu == "📋 Cuentas por Cobrar (Cuotas)":
+    st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
     
-    fiados = []
+    cuotas_pendientes = []
     for v in ventas:
-        if v.get("estado") == "FIADO (Pendiente)":
+        if v.get("estado") == "CUOTAS (Pendiente)":
             cuotas_detalle = v.get("detalle_cuotas", [])
             if any(not c.get("pagada", False) for c in cuotas_detalle):
-                fiados.append(v)
+                cuotas_pendientes.append(v)
     
-    if not fiados:
-        st.success("🎉 ¡Excelente! No hay deudas pendientes por cobrar (todo está pagado).")
+    if not cuotas_pendientes:
+        st.success("🎉 ¡Excelente! No hay cuentas pendientes por cobrar (todo está pagado).")
     else:
-        for v in fiados:
+        for v in cuotas_pendientes:
             st.markdown(f"---")
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -556,7 +530,7 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                                     binance_data["saldo_actual"] += abono_usdt
                                     binance_data["movimientos"].append({
                                         "fecha": str(date.today()),
-                                        "tipo": "Entrada USDT (Abono Fiado)",
+                                        "tipo": "Entrada USDT (Abono Cuotas)",
                                         "monto": abono_usdt,
                                         "descripcion": f"Abono Cuota #{nro_c} - Cliente: {v['cliente']} (Venta #{v['id_venta']})"
                                     })
@@ -572,33 +546,32 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Factura / Comprobante de Abono Profesional ($ a BCV)
+                                    # Comprobante de Abono Limpio y Profesional (Para WhatsApp)
                                     st.markdown("---")
-                                    st.markdown("### 🧾 Comprobante Digital de Abono")
+                                    st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
                                     factura_abono = f"""
-                                    <div class="invoice-container">
+                                    <div class="invoice-card">
                                         <div class="invoice-header">
                                             <div>
-                                                <h2 style="margin:0; color:#d4af37;">LUIS STORE</h2>
-                                                <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">Comprobante de Abono — Cuota #{nro_c}</p>
+                                                <h2 style="margin:0; color:#111111; font-size:20px;">LUIS STORE</h2>
+                                                <p style="margin:4px 0 0 0; font-size:12px; color:#555;">Comprobante de Abono — Cuota #{nro_c}</p>
                                             </div>
                                             <div style="text-align: right;">
-                                                <p style="margin:0; font-size:13px; color:#aaa;">Ref: #{v['id_venta']}<br>Fecha: {date.today()}</p>
+                                                <p style="margin:0; font-size:12px; color:#555;">Ref: #{v['id_venta']}<br>Fecha: {date.today()}</p>
                                             </div>
                                         </div>
-                                        <p style="margin-bottom:15px; font-size:14px;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
-                                        <div style="background:#2b313c; padding:15px; border-radius:8px; margin-bottom:15px;">
-                                            <p style="margin:0; font-size:14px; color:#00ffcc;"><b>MONTO ABONADO:</b> ${abono_bcv:.2f} a BCV</p>
-                                            <p style="margin:5px 0 0 0; font-size:14px; color:#ff4d4d;"><b>RESTA POR PAGAR:</b> ${nueva_resta_bcv:.2f} a BCV</p>
+                                        <p style="margin-bottom:10px; font-size:13px; color:#333;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
+                                        <div style="background:#f1f3f5; padding:12px; border-radius:6px; margin-bottom:15px;">
+                                            <p style="margin:0; font-size:14px; color:#008000;"><b>MONTO ABONADO:</b> ${abono_bcv:.2f} a BCV</p>
+                                            <p style="margin:5px 0 0 0; font-size:14px; color:#cc0000;"><b>RESTA POR PAGAR:</b> ${nueva_resta_bcv:.2f} a BCV</p>
                                         </div>
-                                        <div style="text-align: center; font-size: 12px; color: #d4af37;">
+                                        <div style="text-align: center; font-size: 11px; color: #666;">
                                             Pedidos: 0412-4543304 | Instagram: @luisstore.ve<br>
                                             <b>¡Gracias por tu abono!</b>
                                         </div>
                                     </div>
                                     """
                                     st.markdown(factura_abono, unsafe_allow_html=True)
-                                    st.info("💡 Tómale captura de pantalla a este comprobante y mándaselo al cliente por WhatsApp.")
                                     
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
 
@@ -616,7 +589,7 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                         binance_data["saldo_actual"] += total_deuda_restante
                         binance_data["movimientos"].append({
                             "fecha": str(date.today()),
-                            "tipo": "Entrada USDT (Pago Total Fiado)",
+                            "tipo": "Entrada USDT (Pago Total Cuotas)",
                             "monto": total_deuda_restante,
                             "descripcion": f"Saldado completo Venta #{v['id_venta']} - Cliente: {v['cliente']}"
                         })
@@ -656,18 +629,18 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 resta_bcv_val = resta_u * tasa_ref
 
                 factura_historial = f"""
-                <div class="invoice-container">
+                <div class="invoice-card">
                     <div class="invoice-header">
                         <div>
-                            <h2 style="margin:0; color:#d4af37;">LUIS STORE</h2>
-                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
+                            <h2 style="margin:0; color:#111111; font-size:20px;">LUIS STORE</h2>
+                            <p style="margin:4px 0 0 0; font-size:12px; color:#555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
                         </div>
                         <div style="text-align: right;">
-                            <h3 style="margin:0; color:#fff;">FACTURA</h3>
-                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">N°: #{v_encontrada['id_venta']}<br>Fecha: {v_encontrada['fecha_entrega']}</p>
+                            <h3 style="margin:0; color:#111111; font-size:16px;">FACTURA</h3>
+                            <p style="margin:4px 0 0 0; font-size:12px; color:#555;">N°: #{v_encontrada['id_venta']}<br>Fecha: {v_encontrada['fecha_entrega']}</p>
                         </div>
                     </div>
-                    <p style="margin-bottom:15px; font-size:14px;"><b>Cliente:</b> {v_encontrada['cliente']}</p>
+                    <p style="margin-bottom:10px; font-size:13px; color:#333;"><b>Cliente:</b> {v_encontrada['cliente']}</p>
                     <table class="invoice-table">
                         <tr>
                             <th>Cant</th>
@@ -680,25 +653,24 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                             <td><b>${total_bcv_val:.2f}</b></td>
                         </tr>
                     </table>
-                    <div class="invoice-totals">
-                        <p style="margin:5px 0;"><b>Estado:</b> {v_encontrada['estado']}</p>
+                    <div style="text-align: right; margin-top:10px;">
+                        <p style="margin:3px 0; font-size:13px; color:#333;"><b>Condición:</b> {v_encontrada['estado']}</p>
                 """
-                if v_encontrada['estado'] == "FIADO (Pendiente)":
+                if v_encontrada['estado'] == "CUOTAS (Pendiente)":
                     factura_historial += f"""
-                        <p style="margin:5px 0; color:#ff4d4d;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>
+                        <p style="margin:3px 0; font-size:13px; color:#cc0000;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>
                     """
                 factura_historial += f"""
-                        <h2 style="color:#00ffcc; margin:10px 0;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>
+                        <h3 style="color:#d4af37; margin:5px 0;">TOTAL: ${total_bcv_val:.2f} a BCV</h3>
                     </div>
-                    <hr style="border-color:#333; margin:20px 0;">
-                    <div style="text-align: center; font-size: 12px; color: #d4af37;">
+                    <hr style="border:0; border-top:1px solid #ddd; margin:15px 0;">
+                    <div style="text-align: center; font-size: 11px; color: #666;">
                         Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
                         <b>¡Gracias por tu compra en Luis Store!</b>
                     </div>
                 </div>
                 """
                 st.markdown(factura_historial, unsafe_allow_html=True)
-                st.info("💡 Tómale captura de pantalla a esta factura y envíasela al cliente por WhatsApp.")
 
         total_acum_usdt = df_ventas['total_venta_usdt'].sum()
         total_acum_bcv = df_ventas.get('total_venta_bcv', pd.Series([0]*len(df_ventas))).sum()
