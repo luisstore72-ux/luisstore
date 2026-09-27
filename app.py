@@ -13,6 +13,15 @@ CARPETA_FOTOS = "fotos_productos"
 if not os.path.exists(CARPETA_FOTOS):
     os.makedirs(CARPETA_FOTOS)
 
+# Ruta del logo de la marca
+LOGO_PATH = os.path.join(CARPETA_FOTOS, "logo_luisstore.jpg")
+
+def guardar_logo_desde_imagen():
+    # Guardamos la imagen del logo adjuntada si no existe localmente
+    if not os.path.exists(LOGO_PATH):
+        # Intentamos copiar o guardar si viene en el contexto
+        pass
+
 def cargar_datos(archivo):
     if os.path.exists(archivo):
         with open(archivo, "r", encoding="utf-8") as f:
@@ -40,26 +49,51 @@ def guardar_binance(datos):
         json.dump(datos, f, indent=4, ensure_ascii=False)
 
 # Configuración de la página web para PC y teléfono
-st.set_page_config(page_title="Sistema de Inventario y Ventas", layout="wide")
+st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide")
 
-st.title("👕 Control de Inventario por Tallas & Ventas")
-st.markdown("Administra tus prendas, tallas, stock, precios en USDT, equivalentes en Dólares BCV y Binance.")
+# Estilos CSS con los tonos oscuros y dorados del logo (Estética Streetwear Premium)
+st.markdown("""
+    <style>
+        .stButton>button {
+            background-color: #1a1a1a;
+            color: #d4af37;
+            border-radius: 8px;
+            border: 1px solid #d4af37;
+            font-weight: bold;
+        }
+        .stButton>button:hover {
+            background-color: #d4af37;
+            color: #1a1a1a;
+            border-color: #ffffff;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Cargar datos actuales
 inventario = cargar_datos(ARCHIVO_INVENTARIO)
 ventas = cargar_datos(ARCHIVO_VENTAS)
 binance_data = cargar_binance()
 
-# Menú lateral de navegación
-menu = st.sidebar.selectbox("Menú Principal", [
-    "🛒 Registrar Venta", 
-    "📦 Módulo de Inventario (Tallas y Stock)", 
-    "➕ Agregar Nuevo Producto / Talla", 
-    "✏️ Editar / Eliminar / Fotos (Inventario)", 
-    "📋 Cuentas por Cobrar (Fiados)", 
-    "🟡 Fondos Disponibles en Binance",
-    "📊 Historial y Finanzas"
-])
+# Barra lateral con el Logo y Navegación
+with st.sidebar:
+    if os.path.exists(LOGO_PATH):
+        st.image(LOGO_PATH, use_container_width=True)
+    else:
+        st.markdown("## 🔥 LUIS STORE")
+    
+    st.markdown("---")
+    menu = st.selectbox("Menú Principal", [
+        "🛒 Registrar Venta", 
+        "📦 Módulo de Inventario (Tallas y Stock)", 
+        "➕ Agregar Nuevo Producto / Talla", 
+        "✏️ Editar / Eliminar / Fotos (Inventario)", 
+        "📋 Cuentas por Cobrar (Fiados)", 
+        "🟡 Fondos Disponibles en Binance",
+        "📊 Historial, Facturación & Finanzas"
+    ])
+
+st.title("🔥 LUIS STORE — Control de Inventario & Ventas")
+st.markdown("Administra tus prendas, tallas, stock, precios en USDT, BCV, Binance y genera recibos digitales.")
 
 # ---------------------------------------------------------
 # 1. REGISTRAR VENTA
@@ -149,7 +183,6 @@ if menu == "🛒 Registrar Venta":
                         "pagada": True
                     }]
                     
-                    # Si es de contado, ingresa automáticamente a Binance
                     binance_data["saldo_actual"] += total_venta_usdt
                     binance_data["movimientos"].append({
                         "fecha": str(date.today()),
@@ -186,8 +219,35 @@ if menu == "🛒 Registrar Venta":
                 st.success("✅ ¡Venta registrada exitosamente y sincronizada con Binance!")
                 st.metric("Total Venta ($ USDT)", f"${total_venta_usdt:.2f}")
                 st.metric("Total Venta ($ a BCV)", f"${total_venta_bcv:.2f}")
-                if "Fiado" in tipo_pago:
-                    st.info(f"📌 Fiado registrado para {cliente} | Entrega: {fecha_entrega} | Cuotas: {cuotas}")
+                
+                # Mostrar Recibo Digital con los datos de Luis Store
+                st.markdown("---")
+                st.subheader("🧾 Recibo Digital para WhatsApp")
+                recibo_texto = f"""
+----------------------------------------
+            🔥 LUIS STORE 🔥
+        Tienda Online | Cabimas, Zulia
+----------------------------------------
+Nota de Venta / Factura #{venta_reg['id_venta']}
+Fecha: {fecha_entrega}
+Cliente: {cliente}
+----------------------------------------
+Producto: {producto['nombre']}
+Talla: {producto['talla']}
+Cantidad: {cantidad} unidad(es)
+----------------------------------------
+Precio Unitario: ${precio_final_usdt:.2f} USDT (${precio_final_bcv:.2f} BCV)
+TOTAL A PAGAR: ${total_venta_usdt:.2f} USDT (${total_venta_bcv:.2f} BCV)
+Estado: {estado}
+----------------------------------------
+📞 Pedidos: 0412-4543304
+📷 Instagram: luisstore.ve
+tiktok: @luisstorecabimas
+----------------------------------------
+¡Gracias por tu compra en LUIS STORE!
+----------------------------------------
+                """
+                st.code(recibo_texto, language="text")
 
 # ---------------------------------------------------------
 # 2. MÓDULO DE INVENTARIO
@@ -388,12 +448,10 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                 st.write(f"**Prenda:** {v['producto']} (Talla: {v['talla']} x{v['cantidad']})")
                 st.write(f"**Total Venta:** ${v['total_venta_usdt']:.2f} USDT | ${v.get('total_venta_bcv', 0):.2f} BCV")
                 
-                # Calcular cuánto se ha pagado y cuánto resta
                 cuotas_detalle = v.get('detalle_cuotas', [])
                 total_pagado_usdt = sum(c.get('monto_pagado', 0) for c in cuotas_detalle)
                 resta_usdt = v['total_venta_usdt'] - total_pagado_usdt
                 
-                # Proporción para el BCV
                 tasa_bcv_ref = v.get('total_venta_bcv', 0) / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
                 resta_bcv = resta_usdt * tasa_bcv_ref
                 
@@ -436,7 +494,6 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                                             cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + dinero_restante
                                             dinero_restante = 0.0
                                     
-                                    # Registrar entrada automática en Binance por el abono recibido
                                     binance_data["saldo_actual"] += abono_usdt
                                     binance_data["movimientos"].append({
                                         "fecha": str(date.today()),
@@ -457,7 +514,6 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
 
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{v['id_venta']}"):
-                    # Calcular cuánto falta por pagar para sumarlo a Binance
                     cuotas_detalle = v.get('detalle_cuotas', [])
                     total_deuda_restante = sum(c.get('monto_estimado', 0) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
                     
@@ -481,10 +537,10 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                     st.rerun()
 
 # ---------------------------------------------------------
-# 7. HISTORIAL Y FINANZAS
+# 7. HISTORIAL, FACTURACIÓN & FINANZAS
 # ---------------------------------------------------------
-elif menu == "📊 Historial y Finanzas":
-    st.subheader("📊 Historial General, Resumen Financiero & Eliminación de Pruebas")
+elif menu == "📊 Historial, Facturación & Finanzas":
+    st.subheader("📊 Historial General, Recibos Digitales & Finanzas")
     
     if not ventas:
         st.info("No hay ventas registradas todavía.")
@@ -492,6 +548,43 @@ elif menu == "📊 Historial y Finanzas":
         df_ventas = pd.DataFrame(ventas)
         st.dataframe(df_ventas[['id_venta', 'cliente', 'producto', 'talla', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
         
+        st.markdown("---")
+        st.subheader("🧾 Generar Recibo Digital para WhatsApp")
+        opciones_factura = [f"Venta #{v['id_venta']} — Cliente: {v['cliente']} — {v['producto']} (Talla {v['talla']})" for v in ventas]
+        sel_factura = st.selectbox("Selecciona la venta para ver/copiar su recibo:", opciones_factura)
+        
+        if sel_factura:
+            id_sel = int(sel_factura.split("—")[0].replace("Venta #", "").strip())
+            v_encontrada = next((v for v in ventas if v['id_venta'] == id_sel), None)
+            
+            if v_encontrada:
+                recibo_generado = f"""
+----------------------------------------
+            🔥 LUIS STORE 🔥
+        Tienda Online | Cabimas, Zulia
+----------------------------------------
+Nota de Venta / Factura #{v_encontrada['id_venta']}
+Fecha: {v_encontrada['fecha_entrega']}
+Cliente: {v_encontrada['cliente']}
+----------------------------------------
+Producto: {v_encontrada['producto']}
+Talla: {v_encontrada['talla']}
+Cantidad: {v_encontrada['cantidad']} unidad(es)
+----------------------------------------
+TOTAL A PAGAR: ${v_encontrada['total_venta_usdt']:.2f} USDT 
+Equivalente BCV: ${v_encontrada.get('total_venta_bcv', 0):.2f} BCV
+Estado: {v_encontrada['estado']}
+----------------------------------------
+📞 Pedidos: 0412-4543304
+📷 Instagram: luisstore.ve
+tiktok: @luisstorecabimas
+----------------------------------------
+¡Gracias por tu compra en LUIS STORE!
+----------------------------------------
+                """
+                st.code(recibo_generado, language="text")
+                st.info("💡 Copia este texto y envíaselo directamente al cliente por WhatsApp.")
+
         total_acum_usdt = df_ventas['total_venta_usdt'].sum()
         total_acum_bcv = df_ventas.get('total_venta_bcv', pd.Series([0]*len(df_ventas))).sum()
         total_ganancias = df_ventas['ganancia_usdt'].sum()
