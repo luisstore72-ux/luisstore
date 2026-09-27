@@ -41,12 +41,20 @@ def guardar_binance(datos):
     with open(ARCHIVO_BINANCE, "w", encoding="utf-8") as f:
         json.dump(datos, f, indent=4, ensure_ascii=False)
 
-# Configuración de la página web para PC y teléfono
-st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide")
+# Configuración de la página web para PC y teléfono con forzado de modo oscuro
+st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide", initial_sidebar_state="expanded")
 
-# Estilos CSS con los tonos oscuros y dorados del logo (Estética Streetwear Premium)
+# Estilos CSS avanzados para forzar modo oscuro elegante y diseño de factura profesional
 st.markdown("""
     <style>
+        /* Forzar tema oscuro general en PC y teléfono */
+        .stApp {
+            background-color: #0e1117;
+            color: #ffffff;
+        }
+        sidebar .stApp {
+            background-color: #161a23;
+        }
         .stButton>button {
             background-color: #1a1a1a;
             color: #d4af37;
@@ -58,6 +66,48 @@ st.markdown("""
             background-color: #d4af37;
             color: #1a1a1a;
             border-color: #ffffff;
+        }
+        /* Estilo de Factura Profesional tipo PDF */
+        .invoice-container {
+            background-color: #1e222b;
+            color: #f0f2f6;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #d4af37;
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #d4af37;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .invoice-table th {
+            background-color: #2b313c;
+            color: #d4af37;
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+        .invoice-table td {
+            padding: 10px;
+            border-bottom: 1px solid #2b313c;
+            font-size: 14px;
+        }
+        .invoice-totals {
+            text-align: right;
+            margin-top: 15px;
+            font-size: 16px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -86,7 +136,7 @@ with st.sidebar:
     ])
 
 st.title("🔥 LUIS STORE — Control de Inventario & Ventas")
-st.markdown("Administra tus prendas, tallas, stock, precios en USDT, BCV, Binance y genera recibos digitales.")
+st.markdown("Administra tus prendas, tallas, stock, precios a $ BCV, Binance y genera facturas digitales profesionales.")
 
 # ---------------------------------------------------------
 # 1. REGISTRAR VENTA
@@ -126,9 +176,9 @@ if menu == "🛒 Registrar Venta":
             st.markdown("### 💰 Precios Especiales para Fiado")
             col_p1, col_p2 = st.columns(2)
             with col_p1:
-                precio_final_usdt = st.number_input("Precio en USDT (Fiado):", min_value=0.0, value=float(producto['precio_usdt']), step=0.5)
+                precio_final_usdt = st.number_input("Precio interno USDT (Fiado):", min_value=0.0, value=float(producto['precio_usdt']), step=0.5)
             with col_p2:
-                precio_final_bcv = st.number_input("Precio a $ BCV (Fiado):", min_value=0.0, value=float(producto.get('precio_bcv', 0)), step=0.5)
+                precio_final_bcv = st.number_input("Precio oficial $ a BCV (Fiado):", min_value=0.0, value=float(producto.get('precio_bcv', 0)), step=0.5)
             
             st.markdown("### 📅 Fechas y Cuotas del Fiado")
             fecha_entrega_obj = st.date_input("Fecha de Entrega del Producto:", value=date.today())
@@ -209,37 +259,54 @@ if menu == "🛒 Registrar Venta":
                 guardar_datos(ARCHIVO_INVENTARIO, inventario)
                 guardar_datos(ARCHIVO_VENTAS, ventas)
                 
-                st.success("✅ ¡Venta registrada exitosamente y sincronizada con Binance!")
-                st.metric("Total Venta ($ USDT)", f"${total_venta_usdt:.2f}")
-                st.metric("Total Venta ($ a BCV)", f"${total_venta_bcv:.2f}")
+                st.success("✅ ¡Venta registrada exitosamente!")
+                st.metric("Total Venta ($ a BCV)", f"${total_venta_bcv:.2f} a BCV")
                 
-                # Factura Estilo Tienda Gringa para Venta de Contado
+                # Factura Estilo Profesional ($ a BCV)
                 st.markdown("---")
-                st.subheader("🧾 Factura Digital de Compra (Estilo Tienda)")
-                factura_contado = f"""
-========================================
-             LUIS STORE
-         OFFICIAL STORE ONLINE
-========================================
-Receipt #{venta_reg['id_venta']} | Date: {fecha_entrega}
-Customer: {cliente}
-----------------------------------------
-ITEM DESCRIPTION                QTY   TOTAL
-----------------------------------------
-{producto['nombre']}            {cantidad}     ${total_venta_usdt:.2f}
-Talla: {producto['talla']}                   (${total_venta_bcv:.2f} BCV)
-----------------------------------------
-STATUS: {estado}
-========================================
-   Thank you for shopping with us!
-   
-📞 Orders: 0412-4543304
-📷 IG: luisstore.ve
-🎵 TikTok: @luisstorecabimas
-========================================
+                st.markdown("### 🧾 Factura Digital Profesional")
+                
+                unitario_bcv = precio_final_bcv
+                factura_html = f"""
+                <div class="invoice-container">
+                    <div class="invoice-header">
+                        <div>
+                            <h2 style="margin:0; color:#d4af37;">LUIS STORE</h2>
+                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h3 style="margin:0; color:#fff;">FACTURA</h3>
+                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">N°: #{venta_reg['id_venta']}<br>Fecha: {fecha_entrega}</p>
+                        </div>
+                    </div>
+                    <p style="margin-bottom:15px; font-size:14px;"><b>Cliente:</b> {cliente}</p>
+                    <table class="invoice-table">
+                        <tr>
+                            <th>Cant</th>
+                            <th>Descripción</th>
+                            <th>Precio Unit.</th>
+                            <th>Total</th>
+                        </tr>
+                        <tr>
+                            <td>{cantidad}</td>
+                            <td>{producto['nombre']} (Talla: {producto['talla']})</td>
+                            <td>${unitario_bcv:.2f}</td>
+                            <td><b>${total_venta_bcv:.2f}</b></td>
+                        </tr>
+                    </table>
+                    <div class="invoice-totals">
+                        <p style="margin:5px 0;"><b>Estado:</b> {estado}</p>
+                        <h2 style="color:#00ffcc; margin:10px 0;">TOTAL A PAGAR: ${total_venta_bcv:.2f} a BCV</h2>
+                    </div>
+                    <hr style="border-color:#333; margin:20px 0;">
+                    <div style="text-align: center; font-size: 12px; color: #d4af37;">
+                        Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
+                        <b>¡Gracias por tu compra en Luis Store!</b>
+                    </div>
+                </div>
                 """
-                st.code(factura_contado, language="text")
-                st.info("💡 Copia este recibo y envíaselo al cliente por WhatsApp.")
+                st.markdown(factura_html, unsafe_allow_html=True)
+                st.info("💡 Tómale captura de pantalla a esta factura y envíasela al cliente por WhatsApp.")
 
 # ---------------------------------------------------------
 # 2. MÓDULO DE INVENTARIO
@@ -261,8 +328,7 @@ elif menu == "📦 Módulo de Inventario (Tallas y Stock)":
             with col_info:
                 st.write(f"**ID:** {i} | **Prenda:** {p['nombre']} (Talla: {p['talla']})")
                 st.write(f"**Stock Disponible:** {p['stock']} unidades")
-                st.write(f"**Costo Proveedor:** ${p['costo_usdt']:.2f} | **Envío:** ${p['envio_usdt']:.2f}")
-                st.write(f"**Precio USDT:** ${p['precio_usdt']:.2f} | **Precio $ BCV:** ${p.get('precio_bcv', 0):.2f}")
+                st.write(f"**Precio oficial ($ a BCV):** ${p.get('precio_bcv', 0):.2f}")
 
 # ---------------------------------------------------------
 # 3. AGREGAR NUEVO PRODUCTO O TALLA AL INVENTARIO
@@ -273,10 +339,10 @@ elif menu == "➕ Agregar Nuevo Producto / Talla":
     with st.form("form_producto"):
         nombre = st.text_input("Nombre de la prenda (Ej: Oversize Streetwear, Bermuda, Short)")
         talla = st.selectbox("Selecciona la Talla", ["S", "M", "L", "XL", "XXL", "Única", "30", "32", "34", "36", "38"])
-        costo_usdt = st.number_input("Costo del producto con proveedor (en USDT):", min_value=0.0, step=0.5)
+        costo_usdt = st.number_input("Costo interno con proveedor (en USDT):", min_value=0.0, step=0.5)
         envio_usdt = st.number_input("Costo de envío unitario (en USDT):", min_value=0.0, step=0.1)
-        precio_usdt = st.number_input("Precio en USDT:", min_value=0.0, step=0.5)
-        precio_bcv = st.number_input("Precio a $ BCV:", min_value=0.0, step=0.5)
+        precio_usdt = st.number_input("Precio interno de referencia (en USDT):", min_value=0.0, step=0.5)
+        precio_bcv = st.number_input("Precio de venta oficial ($ a BCV):", min_value=0.0, step=0.5)
         stock = st.number_input("Cantidad / Stock inicial para esta talla:", min_value=0, step=1, value=1)
         
         foto_subida = st.file_uploader("Sube una foto del producto (Opcional):", type=["jpg", "png", "jpeg"])
@@ -330,8 +396,8 @@ elif menu == "✏️ Editar / Eliminar / Fotos (Inventario)":
             nueva_talla = st.text_input("Talla:", value=prod_actual['talla'])
             nuevo_costo = st.number_input("Costo proveedor ($ USDT):", min_value=0.0, value=float(prod_actual['costo_usdt']), step=0.5)
             nuevo_envio = st.number_input("Costo envío unitario ($ USDT):", min_value=0.0, value=float(prod_actual['envio_usdt']), step=0.1)
-            nuevo_precio_usdt = st.number_input("Precio en USDT:", min_value=0.0, value=float(prod_actual['precio_usdt']), step=0.5)
-            nuevo_precio_bcv = st.number_input("Precio a $ BCV:", min_value=0.0, value=float(prod_actual.get('precio_bcv', 0)), step=0.5)
+            nuevo_precio_usdt = st.number_input("Precio ref USDT:", min_value=0.0, value=float(prod_actual['precio_usdt']), step=0.5)
+            nuevo_precio_bcv = st.number_input("Precio oficial ($ a BCV):", min_value=0.0, value=float(prod_actual.get('precio_bcv', 0)), step=0.5)
             nuevo_stock = st.number_input("Stock total actual:", min_value=0, value=int(prod_actual['stock']), step=1)
             
             guardar_cambios = st.form_submit_button("Actualizar Producto")
@@ -437,17 +503,18 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                 st.write(f"**Cliente:** {v['cliente']}")
                 st.write(f"**Entrega:** {v.get('fecha_entrega', 'N/A')}")
             with col2:
+                total_bcv_ref = v.get('total_venta_bcv', 0)
                 st.write(f"**Prenda:** {v['producto']} (Talla: {v['talla']} x{v['cantidad']})")
-                st.write(f"**Total Venta:** ${v['total_venta_usdt']:.2f} USDT | ${v.get('total_venta_bcv', 0):.2f} BCV")
+                st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
                 total_pagado_usdt = sum(c.get('monto_pagado', 0) for c in cuotas_detalle)
                 resta_usdt = v['total_venta_usdt'] - total_pagado_usdt
                 
-                tasa_bcv_ref = v.get('total_venta_bcv', 0) / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
+                tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
                 resta_bcv = resta_usdt * tasa_bcv_ref
                 
-                st.markdown(f"🔴 **Resta por cobrar:** **${resta_usdt:.2f} USDT** | **${resta_bcv:.2f} BCV**")
+                st.markdown(f"🔴 **Resta por cobrar:** **${resta_bcv:.2f} a BCV**")
                 
                 st.markdown("**Desglose de Cuotas y Abonos:**")
                 for c in cuotas_detalle:
@@ -457,16 +524,16 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                     pagada_c = c.get('pagada', False)
                     
                     if pagada_c:
-                        st.markdown(f"✅ ~~Cuota {nro_c} (Vence: {fecha_c}) | Abonado: **${monto_pag:.2f}**~~ **[PAGADA]**")
+                        st.markdown(f"✅ ~~Cuota {nro_c} (Vence: {fecha_c}) | Pagada~~ **[PAGADA]**")
                     else:
                         st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
-                            abono_usdt = st.number_input(f"Monto abonado en USDT:", min_value=0.0, value=float(resta_usdt), step=0.5, key=f"inp_abono_usdt_{v['id_venta']}_{nro_c}")
-                            abono_bcv = st.number_input(f"Monto abonado en $ BCV:", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_abono_bcv_{v['id_venta']}_{nro_c}")
+                            abono_usdt = st.number_input(f"Monto abonado (equivalente interno USDT):", min_value=0.0, value=float(resta_usdt), step=0.5, key=f"inp_abono_usdt_{v['id_venta']}_{nro_c}")
+                            abono_bcv = st.number_input(f"Monto abonado en $ a BCV:", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_abono_bcv_{v['id_venta']}_{nro_c}")
                             
                             if st.button(f"Aplicar Abono Cuota #{nro_c}", key=f"btn_conf_{v['id_venta']}_{nro_c}"):
-                                if abono_usdt <= 0:
+                                if abono_usdt <= 0 or abono_bcv <= 0:
                                     st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
                                     dinero_restante = abono_usdt
@@ -495,47 +562,43 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                                     })
                                     guardar_binance(binance_data)
                                     
-                                    # Recalcular saldo restante actualizado para la factura de cuota
                                     nuevo_total_pagado = sum(item.get('monto_pagado', 0) for item in cuotas_detalle)
                                     nueva_resta_usdt = v['total_venta_usdt'] - nuevo_total_pagado
                                     nueva_resta_bcv = nueva_resta_usdt * tasa_bcv_ref
                                     
                                     if all(item.get('pagada', False) for item in cuotas_detalle):
                                         v['estado'] = "PAGADO"
-                                        st.success(f"¡Excelente! La venta #{v['id_venta']} ha sido saldada por completo y sumada a Binance.")
+                                        st.success(f"✅ ¡Venta #{v['id_venta']} saldada por completo!")
                                     else:
-                                        st.success(f"¡Abono registrado con éxito!")
+                                        st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Factura digital de Cuota / Abono para WhatsApp
+                                    # Factura / Comprobante de Abono Profesional ($ a BCV)
                                     st.markdown("---")
-                                    st.subheader(f"🧾 Factura / Recibo de Abono (Cuota #{nro_c})")
-                                    factura_cuota = f"""
-========================================
-             LUIS STORE
-         OFFICIAL STORE ONLINE
-========================================
-Receipt #{v['id_venta']} - Payment Update
-Date: {date.today()}
-Customer: {v['cliente']}
-----------------------------------------
-Item: {v['producto']} (Talla: {v['talla']})
-Total Debt: ${v['total_venta_usdt']:.2f} USDT (${v.get('total_venta_bcv', 0):.2f} BCV)
-----------------------------------------
-PAID THIS TIME (Cuota #{nro_c}):
-💰 ${abono_usdt:.2f} USDT (${abono_bcv:.2f} BCV)
-----------------------------------------
-REMAINING BALANCE (RESTA):
-🔴 ${nueva_resta_usdt:.2f} USDT (${nueva_resta_bcv:.2f} BCV)
-----------------------------------------
-📞 Orders: 0412-4543304
-📷 IG: luisstore.ve
-🎵 TikTok: @luisstorecabimas
-========================================
-   Thank you for your payment!
-========================================
+                                    st.markdown("### 🧾 Comprobante Digital de Abono")
+                                    factura_abono = f"""
+                                    <div class="invoice-container">
+                                        <div class="invoice-header">
+                                            <div>
+                                                <h2 style="margin:0; color:#d4af37;">LUIS STORE</h2>
+                                                <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">Comprobante de Abono — Cuota #{nro_c}</p>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <p style="margin:0; font-size:13px; color:#aaa;">Ref: #{v['id_venta']}<br>Fecha: {date.today()}</p>
+                                            </div>
+                                        </div>
+                                        <p style="margin-bottom:15px; font-size:14px;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
+                                        <div style="background:#2b313c; padding:15px; border-radius:8px; margin-bottom:15px;">
+                                            <p style="margin:0; font-size:14px; color:#00ffcc;"><b>MONTO ABONADO:</b> ${abono_bcv:.2f} a BCV</p>
+                                            <p style="margin:5px 0 0 0; font-size:14px; color:#ff4d4d;"><b>RESTA POR PAGAR:</b> ${nueva_resta_bcv:.2f} a BCV</p>
+                                        </div>
+                                        <div style="text-align: center; font-size: 12px; color: #d4af37;">
+                                            Pedidos: 0412-4543304 | Instagram: @luisstore.ve<br>
+                                            <b>¡Gracias por tu abono!</b>
+                                        </div>
+                                    </div>
                                     """
-                                    st.code(factura_cuota, language="text")
-                                    st.info("💡 Copia este recibo de cuota y envíaselo al cliente por WhatsApp.")
+                                    st.markdown(factura_abono, unsafe_allow_html=True)
+                                    st.info("💡 Tómale captura de pantalla a este comprobante y mándaselo al cliente por WhatsApp.")
                                     
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
 
@@ -560,7 +623,7 @@ REMAINING BALANCE (RESTA):
                         guardar_binance(binance_data)
 
                     guardar_datos(ARCHIVO_VENTAS, ventas)
-                    st.success(f"¡Venta #{v['id_venta']} marcada como pagada y saldo agregado a Binance!")
+                    st.success(f"¡Venta #{v['id_venta']} marcada como pagada!")
                     st.rerun()
 
 # ---------------------------------------------------------
@@ -576,51 +639,66 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         st.dataframe(df_ventas[['id_venta', 'cliente', 'producto', 'talla', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
         
         st.markdown("---")
-        st.subheader("🧾 Generar Recibo / Factura Digital para WhatsApp")
+        st.subheader("🧾 Generar Factura Digital Profesional para WhatsApp")
         opciones_factura = [f"Venta #{v['id_venta']} — Cliente: {v['cliente']} — {v['producto']} (Talla {v['talla']})" for v in ventas]
-        sel_factura = st.selectbox("Selecciona la venta para ver/copiar su factura:", opciones_factura)
+        sel_factura = st.selectbox("Selecciona la venta para ver su factura:", opciones_factura)
         
         if sel_factura:
             id_sel = int(sel_factura.split("—")[0].replace("Venta #", "").strip())
             v_encontrada = next((v for v in ventas if v['id_venta'] == id_sel), None)
             
             if v_encontrada:
-                # Calcular cuánto resta por si acaso es fiado
+                total_bcv_val = v_encontrada.get('total_venta_bcv', 0)
                 cuotas_d = v_encontrada.get('detalle_cuotas', [])
                 pagado_u = sum(c.get('monto_pagado', 0) for c in cuotas_d)
                 resta_u = v_encontrada['total_venta_usdt'] - pagado_u
-                tasa_ref = v_encontrada.get('total_venta_bcv', 0) / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
-                resta_b = resta_u * tasa_ref
+                tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
+                resta_bcv_val = resta_u * tasa_ref
 
                 factura_historial = f"""
-========================================
-             LUIS STORE
-         OFFICIAL STORE ONLINE
-========================================
-Receipt #{v_encontrada['id_venta']} | Date: {v_encontrada['fecha_entrega']}
-Customer: {v_encontrada['cliente']}
-----------------------------------------
-ITEM DESCRIPTION                QTY   TOTAL
-----------------------------------------
-{v_encontrada['producto']}            {v_encontrada['cantidad']}     ${v_encontrada['total_venta_usdt']:.2f}
-Talla: {v_encontrada['talla']}                   (${v_encontrada.get('total_venta_bcv', 0):.2f} BCV)
-----------------------------------------
-STATUS: {v_encontrada['estado']}
-"""
-                if v_encontrada['estado'] == "FIADO (Pendiente)":
-                    factura_historial += f"""REMAINING BALANCE (RESTA):
-🔴 ${resta_u:.2f} USDT (${resta_b:.2f} BCV)
-----------------------------------------
-"""
-                factura_historial += f"""📞 Orders: 0412-4543304
-📷 IG: luisstore.ve
-🎵 TikTok: @luisstorecabimas
-========================================
-   Thank you for shopping with us!
-========================================
+                <div class="invoice-container">
+                    <div class="invoice-header">
+                        <div>
+                            <h2 style="margin:0; color:#d4af37;">LUIS STORE</h2>
+                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h3 style="margin:0; color:#fff;">FACTURA</h3>
+                            <p style="margin:5px 0 0 0; font-size:13px; color:#aaa;">N°: #{v_encontrada['id_venta']}<br>Fecha: {v_encontrada['fecha_entrega']}</p>
+                        </div>
+                    </div>
+                    <p style="margin-bottom:15px; font-size:14px;"><b>Cliente:</b> {v_encontrada['cliente']}</p>
+                    <table class="invoice-table">
+                        <tr>
+                            <th>Cant</th>
+                            <th>Descripción</th>
+                            <th>Total</th>
+                        </tr>
+                        <tr>
+                            <td>{v_encontrada['cantidad']}</td>
+                            <td>{v_encontrada['producto']} (Talla: {v_encontrada['talla']})</td>
+                            <td><b>${total_bcv_val:.2f}</b></td>
+                        </tr>
+                    </table>
+                    <div class="invoice-totals">
+                        <p style="margin:5px 0;"><b>Estado:</b> {v_encontrada['estado']}</p>
                 """
-                st.code(factura_historial, language="text")
-                st.info("💡 Copia este recibo y envíaselo directamente al cliente por WhatsApp.")
+                if v_encontrada['estado'] == "FIADO (Pendiente)":
+                    factura_historial += f"""
+                        <p style="margin:5px 0; color:#ff4d4d;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>
+                    """
+                factura_historial += f"""
+                        <h2 style="color:#00ffcc; margin:10px 0;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>
+                    </div>
+                    <hr style="border-color:#333; margin:20px 0;">
+                    <div style="text-align: center; font-size: 12px; color: #d4af37;">
+                        Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
+                        <b>¡Gracias por tu compra en Luis Store!</b>
+                    </div>
+                </div>
+                """
+                st.markdown(factura_historial, unsafe_allow_html=True)
+                st.info("💡 Tómale captura de pantalla a esta factura y envíasela al cliente por WhatsApp.")
 
         total_acum_usdt = df_ventas['total_venta_usdt'].sum()
         total_acum_bcv = df_ventas.get('total_venta_bcv', pd.Series([0]*len(df_ventas))).sum()
@@ -630,7 +708,7 @@ STATUS: {v_encontrada['estado']}
         st.markdown("---")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
-        col2.metric("Venta Total ($ BCV)", f"${total_acum_bcv:.2f}")
+        col2.metric("Venta Total ($ a BCV)", f"${total_acum_bcv:.2f}")
         col3.metric("Ganancias Totales", f"${total_ganancias:.2f}")
         col4.metric("Fondo de Reinversión", f"${total_reinversion:.2f}")
         
