@@ -453,6 +453,26 @@ elif menu == "🟡 Fondos Disponibles en Binance":
         df_movs = pd.DataFrame(movs)
         st.dataframe(df_movs)
 
+        st.markdown("### 🗑️ Limpiar o Eliminar Transacciones de Binance")
+        col_del1, col_del2 = st.columns(2)
+        
+        with col_del1:
+            if st.button("🗑️ Eliminar el último movimiento"):
+                if binance_data["movimientos"]:
+                    ultimo = binance_data["movimientos"].pop()
+                    # Revertir el saldo
+                    binance_data["saldo_actual"] -= ultimo["monto"]
+                    guardar_binance(binance_data)
+                    st.success("✅ ¡Último movimiento eliminado y saldo ajustado!")
+                    st.rerun()
+                    
+        with col_del2:
+            if st.button("⚠️ Resetear / Limpiar todo el historial de Binance", type="primary"):
+                binance_data = {"saldo_actual": 0.0, "movimientos": []}
+                guardar_binance(binance_data)
+                st.success("✅ ¡Historial de Binance limpiado y saldo puesto en 0.00 USDT!")
+                st.rerun()
+
 # ---------------------------------------------------------
 # 6. CUENTAS POR COBRAR (CUOTAS)
 # ---------------------------------------------------------
