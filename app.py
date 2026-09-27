@@ -460,7 +460,6 @@ elif menu == "🟡 Fondos Disponibles en Binance":
             if st.button("🗑️ Eliminar el último movimiento"):
                 if binance_data["movimientos"]:
                     ultimo = binance_data["movimientos"].pop()
-                    # Revertir el saldo
                     binance_data["saldo_actual"] -= ultimo["monto"]
                     guardar_binance(binance_data)
                     st.success("✅ ¡Último movimiento eliminado y saldo ajustado!")
@@ -676,12 +675,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                     </table>
                     <div style="text-align: right; margin-top:15px;">
                         <p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {v_encontrada['estado']}</p>
-                """
-                if v_encontrada['estado'] == "CUOTAS (Pendiente)":
-                    factura_historial += f"""
-                        <p style="margin:4px 0; font-size:13px; color:#c62828;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>
-                    """
-                factura_historial += f"""
+                        {"<p style='margin:4px 0; font-size:13px; color:#c62828;'><b>Resta por pagar:</b> $" + f"{resta_bcv_val:.2f}" + " a BCV</p>" if v_encontrada['estado'] == "CUOTAS (Pendiente)" else ""}
                         <h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>
                     </div>
                     <hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">
