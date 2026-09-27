@@ -99,9 +99,9 @@ if menu == "🛒 Registrar Venta":
             st.markdown("### 💰 Precios Especiales para Fiado")
             col_p1, col_p2 = st.columns(2)
             with col_p1:
-                precio_final_usdt = st.number_input("Precio unitario en USDT (Fiado):", min_value=0.0, value=float(producto['precio_usdt']), step=0.5)
+                precio_final_usdt = st.number_input("Precio en USDT (Fiado):", min_value=0.0, value=float(producto['precio_usdt']), step=0.5)
             with col_p2:
-                precio_final_bcv = st.number_input("Precio unitario a $ BCV (Fiado):", min_value=0.0, value=float(producto.get('precio_bcv', 0)), step=0.5)
+                precio_final_bcv = st.number_input("Precio a $ BCV (Fiado):", min_value=0.0, value=float(producto.get('precio_bcv', 0)), step=0.5)
             
             st.markdown("### 📅 Fechas y Cuotas del Fiado")
             fecha_entrega_obj = st.date_input("Fecha de Entrega del Producto:", value=date.today())
@@ -110,22 +110,14 @@ if menu == "🛒 Registrar Venta":
             cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
             
             total_v_usdt_calc = precio_final_usdt * cantidad
-            total_v_bcv_calc = precio_final_bcv * cantidad
+            monto_por_cuota = total_v_usdt_calc / cuotas
 
-            st.markdown("📝 **Define el monto y la fecha límite para cada cuota (Tú decides cuánto va en cada una):**")
-            
-            # Formulario dinámico para definir cada cuota libremente
-            monto_acumulado_cuotas = 0.0
+            st.markdown("📝 **Indica la fecha límite para cada cuota (el sistema las divide automáticamente):**")
             for c in range(1, cuotas + 1):
-                col_c1, col_c2 = st.columns(2)
-                with col_c1:
-                    monto_c_usdt = st.number_input(f"Monto Cuota #{c} en USDT:", min_value=0.0, value=round(total_v_usdt_calc / cuotas, 2), step=0.5, key=f"cuota_m_{c}")
-                with col_c2:
-                    f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
-                
+                f_cuota = st.date_input(f"Fecha límite cuota #{c} (${monto_por_cuota:.2f}):", value=date.today(), key=f"cuota_f_{c}")
                 detalle_cuotas.append({
                     "nro": c,
-                    "monto_estimado": monto_c_usdt,
+                    "monto_estimado": monto_por_cuota,
                     "monto_pagado": 0.0,
                     "fecha": str(f_cuota),
                     "pagada": False
