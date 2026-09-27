@@ -242,44 +242,34 @@ if menu == "🛒 Registrar Venta":
                 st.markdown("### 🧾 Factura Digital (Tómale capture para WhatsApp)")
                 
                 unitario_bcv = precio_final_bcv
-                factura_html = f"""
-                <div class="invoice-card">
-                    <div class="invoice-header">
-                        <div>
-                            <h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{venta_reg['id_venta']}<br>Fecha: {fecha_entrega}</p>
-                        </div>
-                    </div>
-                    <p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {cliente}</p>
-                    <table class="invoice-table">
-                        <tr>
-                            <th>Cant</th>
-                            <th>Descripción</th>
-                            <th>Precio Unit.</th>
-                            <th>Total</th>
-                        </tr>
-                        <tr>
-                            <td>{cantidad}</td>
-                            <td>{producto['nombre']} (Talla: {producto['talla']})</td>
-                            <td>${unitario_bcv:.2f}</td>
-                            <td><b>${total_venta_bcv:.2f}</b></td>
-                        </tr>
-                    </table>
-                    <div style="text-align: right; margin-top:15px;">
-                        <p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {estado}</p>
-                        <h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_venta_bcv:.2f} a BCV</h2>
-                    </div>
-                    <hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">
-                    <div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">
-                        Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
-                        <b>¡Gracias por tu compra en Luis Store!</b>
-                    </div>
-                </div>
-                """
+                factura_html = (
+                    '<div class="invoice-card">'
+                    '<div class="invoice-header">'
+                    '<div>'
+                    '<h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>'
+                    '<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>'
+                    '</div>'
+                    '<div style="text-align: right;">'
+                    '<h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>'
+                    f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{venta_reg["id_venta"]}<br>Fecha: {fecha_entrega}</p>'
+                    '</div>'
+                    '</div>'
+                    f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {cliente}</p>'
+                    '<table class="invoice-table">'
+                    '<tr><th>Cant</th><th>Descripción</th><th>Precio Unit.</th><th>Total</th></tr>'
+                    f'<tr><td>{cantidad}</td><td>{producto["nombre"]} (Talla: {producto["talla"]})</td><td>${unitario_bcv:.2f}</td><td><b>${total_venta_bcv:.2f}</b></td></tr>'
+                    '</table>'
+                    '<div style="text-align: right; margin-top:15px;">'
+                    f'<p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {estado}</p>'
+                    f'<h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_venta_bcv:.2f} a BCV</h2>'
+                    '</div>'
+                    '<hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">'
+                    '<div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">'
+                    'Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>'
+                    '<b>¡Gracias por tu compra en Luis Store!</b>'
+                    '</div>'
+                    '</div>'
+                )
                 st.markdown(factura_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
@@ -569,28 +559,28 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     # Comprobante de Abono Elegante Estilo Premium (Fondo blanco optimizado)
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
-                                    factura_abono = f"""
-                                    <div class="invoice-card">
-                                        <div class="invoice-header">
-                                            <div>
-                                                <h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
-                                                <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Comprobante de Abono — Cuota #{nro_c}</p>
-                                            </div>
-                                            <div style="text-align: right;">
-                                                <p style="margin:0; font-size:12px; color:#555555;">Ref: #{v['id_venta']}<br>Fecha: {date.today()}</p>
-                                            </div>
-                                        </div>
-                                        <p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
-                                        <div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e0e0e0; margin-bottom:15px;">
-                                            <p style="margin:0; font-size:14px; color:#2e7d32; font-weight:bold;">MONTO ABONADO: ${monto_factura_bcv:.2f} a BCV</p>
-                                            <p style="margin:8px 0 0 0; font-size:14px; color:#c62828; font-weight:bold;">RESTA POR PAGAR: ${resta_factura_bcv:.2f} a BCV</p>
-                                        </div>
-                                        <div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">
-                                            Pedidos: 0412-4543304 | Instagram: @luisstore.ve<br>
-                                            <b>¡Gracias por tu abono!</b>
-                                        </div>
-                                    </div>
-                                    """
+                                    factura_abono = (
+                                        '<div class="invoice-card">'
+                                        '<div class="invoice-header">'
+                                        '<div>'
+                                        '<h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>'
+                                        f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Comprobante de Abono — Cuota #{nro_c}</p>'
+                                        '</div>'
+                                        '<div style="text-align: right;">'
+                                        f'<p style="margin:0; font-size:12px; color:#555555;">Ref: #{v["id_venta"]}<br>Fecha: {date.today()}</p>'
+                                        '</div>'
+                                        '</div>'
+                                        f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v["cliente"]}<br><b>Producto:</b> {v["producto"]} ({v["talla"]})</p>'
+                                        '<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e0e0e0; margin-bottom:15px;">'
+                                        f'<p style="margin:0; font-size:14px; color:#2e7d32; font-weight:bold;">MONTO ABONADO: ${monto_factura_bcv:.2f} a BCV</p>'
+                                        f'<p style="margin:8px 0 0 0; font-size:14px; color:#c62828; font-weight:bold;">RESTA POR PAGAR: ${resta_factura_bcv:.2f} a BCV</p>'
+                                        '</div>'
+                                        '<div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">'
+                                        'Pedidos: 0412-4543304 | Instagram: @luisstore.ve<br>'
+                                        '<b>¡Gracias por tu abono!</b>'
+                                        '</div>'
+                                        '</div>'
+                                    )
                                     st.markdown(factura_abono, unsafe_allow_html=True)
                                     
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
@@ -648,48 +638,39 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
                 resta_bcv_val = resta_u * tasa_ref
 
-                # Construcción limpia de la factura del historial sin fragmentar bloques HTML
                 texto_resta_html = ""
                 if v_encontrada['estado'] == "CUOTAS (Pendiente)":
                     texto_resta_html = f'<p style="margin:4px 0; font-size:13px; color:#c62828;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>'
 
-                factura_historial = f"""
-                <div class="invoice-card">
-                    <div class="invoice-header">
-                        <div>
-                            <h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{v_encontrada['id_venta']}<br>Fecha: {v_encontrada['fecha_entrega']}</p>
-                        </div>
-                    </div>
-                    <p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v_encontrada['cliente']}</p>
-                    <table class="invoice-table">
-                        <tr>
-                            <th>Cant</th>
-                            <th>Descripción</th>
-                            <th>Total</th>
-                        </tr>
-                        <tr>
-                            <td>{v_encontrada['cantidad']}</td>
-                            <td>{v_encontrada['producto']} (Talla: {v_encontrada['talla']})</td>
-                            <td><b>${total_bcv_val:.2f}</b></td>
-                        </tr>
-                    </table>
-                    <div style="text-align: right; margin-top:15px;">
-                        <p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {v_encontrada['estado']}</p>
-                        {texto_resta_html}
-                        <h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>
-                    </div>
-                    <hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">
-                    <div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">
-                        Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
-                        <b>¡Gracias por tu compra en Luis Store!</b>
-                    </div>
-                </div>
-                """
+                factura_historial = (
+                    '<div class="invoice-card">'
+                    '<div class="invoice-header">'
+                    '<div>'
+                    '<h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>'
+                    '<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>'
+                    '</div>'
+                    '<div style="text-align: right;">'
+                    '<h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>'
+                    f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{v_encontrada["id_venta"]}<br>Fecha: {v_encontrada["fecha_entrega"]}</p>'
+                    '</div>'
+                    '</div>'
+                    f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v_encontrada["cliente"]}</p>'
+                    '<table class="invoice-table">'
+                    '<tr><th>Cant</th><th>Descripción</th><th>Total</th></tr>'
+                    f'<tr><td>{v_encontrada["cantidad"]}</td><td>{v_encontrada["producto"]} (Talla: {v_encontrada["talla"]})</td><td><b>${total_bcv_val:.2f}</b></td></tr>'
+                    '</table>'
+                    '<div style="text-align: right; margin-top:15px;">'
+                    f'<p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {v_encontrada["estado"]}</p>'
+                    f'{texto_resta_html}'
+                    f'<h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>'
+                    '</div>'
+                    '<hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">'
+                    '<div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">'
+                    'Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>'
+                    '<b>¡Gracias por tu compra en Luis Store!</b>'
+                    '</div>'
+                    '</div>'
+                )
                 st.markdown(factura_historial, unsafe_allow_html=True)
 
         total_acum_usdt = df_ventas['total_venta_usdt'].sum()
