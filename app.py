@@ -44,19 +44,19 @@ def guardar_binance(datos):
 # Configuración de la página web
 st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide")
 
-# Estilos CSS con diseño de factura elegante (Fondo oscuro antracite, detalles dorados y grises finos)
+# Estilos CSS con diseño de factura elegante (Fondo blanco optimizado para impresión y detalles dorados)
 st.markdown("""
     <style>
         .invoice-card {
-            background: linear-gradient(145deg, #161922, #1b1f2b);
-            color: #f0f2f5;
+            background: #ffffff;
+            color: #111111;
             padding: 35px;
             border-radius: 14px;
             border: 1px solid #d4af37;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             max-width: 520px;
             margin: auto;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
         .invoice-header {
             display: flex;
@@ -72,18 +72,18 @@ st.markdown("""
             margin-bottom: 20px;
         }
         .invoice-table th {
-            background-color: #242938;
-            color: #d4af37;
+            background-color: #f9f9f9;
+            color: #b89728;
             padding: 10px;
             text-align: left;
             font-size: 13px;
-            border-bottom: 1px solid #333a4d;
+            border-bottom: 1px solid #ddd;
         }
         .invoice-table td {
             padding: 10px;
-            border-bottom: 1px solid #242938;
+            border-bottom: 1px solid #eee;
             font-size: 13px;
-            color: #d1d5db;
+            color: #222222;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -237,7 +237,7 @@ if menu == "🛒 Registrar Venta":
                 
                 st.success("✅ ¡Venta registrada exitosamente!")
                 
-                # Factura Elegante Estilo Premium (Lista para capture)
+                # Factura Elegante Estilo Premium (Fondo blanco optimizado)
                 st.markdown("---")
                 st.markdown("### 🧾 Factura Digital (Tómale capture para WhatsApp)")
                 
@@ -246,15 +246,15 @@ if menu == "🛒 Registrar Venta":
                 <div class="invoice-card">
                     <div class="invoice-header">
                         <div>
-                            <h2 style="margin:0; color:#d4af37; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#9ca3af;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
+                            <h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
+                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
                         </div>
                         <div style="text-align: right;">
-                            <h3 style="margin:0; color:#ffffff; font-size:15px; letter-spacing:1px;">FACTURA</h3>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#9ca3af;">N°: #{venta_reg['id_venta']}<br>Fecha: {fecha_entrega}</p>
+                            <h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>
+                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{venta_reg['id_venta']}<br>Fecha: {fecha_entrega}</p>
                         </div>
                     </div>
-                    <p style="margin-bottom:15px; font-size:13px; color:#e5e7eb;"><b>Cliente:</b> {cliente}</p>
+                    <p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {cliente}</p>
                     <table class="invoice-table">
                         <tr>
                             <th>Cant</th>
@@ -270,11 +270,11 @@ if menu == "🛒 Registrar Venta":
                         </tr>
                     </table>
                     <div style="text-align: right; margin-top:15px;">
-                        <p style="margin:4px 0; font-size:13px; color:#9ca3af;"><b>Condición:</b> {estado}</p>
-                        <h2 style="color:#d4af37; margin:8px 0; font-size:20px;">TOTAL: ${total_venta_bcv:.2f} a BCV</h2>
+                        <p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {estado}</p>
+                        <h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_venta_bcv:.2f} a BCV</h2>
                     </div>
-                    <hr style="border:0; border-top:1px solid #333a4d; margin:20px 0;">
-                    <div style="text-align: center; font-size: 11px; color: #9ca3af; letter-spacing:0.5px;">
+                    <hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">
+                    <div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">
                         Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
                         <b>¡Gracias por tu compra en Luis Store!</b>
                     </div>
@@ -547,26 +547,26 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Comprobante de Abono Elegante Estilo Premium
+                                    # Comprobante de Abono Elegante Estilo Premium (Fondo blanco optimizado)
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
                                     factura_abono = f"""
                                     <div class="invoice-card">
                                         <div class="invoice-header">
                                             <div>
-                                                <h2 style="margin:0; color:#d4af37; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
-                                                <p style="margin:5px 0 0 0; font-size:12px; color:#9ca3af;">Comprobante de Abono — Cuota #{nro_c}</p>
+                                                <h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
+                                                <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Comprobante de Abono — Cuota #{nro_c}</p>
                                             </div>
                                             <div style="text-align: right;">
-                                                <p style="margin:0; font-size:12px; color:#9ca3af;">Ref: #{v['id_venta']}<br>Fecha: {date.today()}</p>
+                                                <p style="margin:0; font-size:12px; color:#555555;">Ref: #{v['id_venta']}<br>Fecha: {date.today()}</p>
                                             </div>
                                         </div>
-                                        <p style="margin-bottom:15px; font-size:13px; color:#e5e7eb;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
-                                        <div style="background:#242938; padding:15px; border-radius:8px; border:1px solid #333a4d; margin-bottom:15px;">
-                                            <p style="margin:0; font-size:14px; color:#10b981;"><b>MONTO ABONADO:</b> ${monto_factura_bcv:.2f} a BCV</p>
-                                            <p style="margin:8px 0 0 0; font-size:14px; color:#ef4444;"><b>RESTA POR PAGAR:</b> ${resta_factura_bcv:.2f} a BCV</p>
+                                        <p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
+                                        <div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e0e0e0; margin-bottom:15px;">
+                                            <p style="margin:0; font-size:14px; color:#2e7d32; font-weight:bold;">MONTO ABONADO: ${monto_factura_bcv:.2f} a BCV</p>
+                                            <p style="margin:8px 0 0 0; font-size:14px; color:#c62828; font-weight:bold;">RESTA POR PAGAR: ${resta_factura_bcv:.2f} a BCV</p>
                                         </div>
-                                        <div style="text-align: center; font-size: 11px; color: #9ca3af; letter-spacing:0.5px;">
+                                        <div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">
                                             Pedidos: 0412-4543304 | Instagram: @luisstore.ve<br>
                                             <b>¡Gracias por tu abono!</b>
                                         </div>
@@ -633,15 +633,15 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 <div class="invoice-card">
                     <div class="invoice-header">
                         <div>
-                            <h2 style="margin:0; color:#d4af37; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#9ca3af;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
+                            <h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>
+                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>
                         </div>
                         <div style="text-align: right;">
-                            <h3 style="margin:0; color:#ffffff; font-size:15px; letter-spacing:1px;">FACTURA</h3>
-                            <p style="margin:5px 0 0 0; font-size:12px; color:#9ca3af;">N°: #{v_encontrada['id_venta']}<br>Fecha: {v_encontrada['fecha_entrega']}</p>
+                            <h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>
+                            <p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{v_encontrada['id_venta']}<br>Fecha: {v_encontrada['fecha_entrega']}</p>
                         </div>
                     </div>
-                    <p style="margin-bottom:15px; font-size:13px; color:#e5e7eb;"><b>Cliente:</b> {v_encontrada['cliente']}</p>
+                    <p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v_encontrada['cliente']}</p>
                     <table class="invoice-table">
                         <tr>
                             <th>Cant</th>
@@ -655,17 +655,17 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                         </tr>
                     </table>
                     <div style="text-align: right; margin-top:15px;">
-                        <p style="margin:4px 0; font-size:13px; color:#9ca3af;"><b>Condición:</b> {v_encontrada['estado']}</p>
+                        <p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {v_encontrada['estado']}</p>
                 """
                 if v_encontrada['estado'] == "CUOTAS (Pendiente)":
                     factura_historial += f"""
-                        <p style="margin:4px 0; font-size:13px; color:#ef4444;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>
+                        <p style="margin:4px 0; font-size:13px; color:#c62828;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>
                     """
                 factura_historial += f"""
-                        <h2 style="color:#d4af37; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>
+                        <h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>
                     </div>
-                    <hr style="border:0; border-top:1px solid #333a4d; margin:20px 0;">
-                    <div style="text-align: center; font-size: 11px; color: #9ca3af; letter-spacing:0.5px;">
+                    <hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">
+                    <div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">
                         Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>
                         <b>¡Gracias por tu compra en Luis Store!</b>
                     </div>
