@@ -112,9 +112,9 @@ if menu == "🛒 Registrar Venta":
             total_v_usdt_calc = precio_final_usdt * cantidad
             monto_por_cuota = total_v_usdt_calc / cuotas
 
-            st.markdown("📝 **Indica la fecha límite para cada cuota (el sistema las divide automáticamente):**")
+            st.markdown("📝 **Indica la fecha límite para cada cuota:**")
             for c in range(1, cuotas + 1):
-                f_cuota = st.date_input(f"Fecha límite cuota #{c} (${monto_por_cuota:.2f}):", value=date.today(), key=f"cuota_f_{c}")
+                f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
                 detalle_cuotas.append({
                     "nro": c,
                     "monto_estimado": monto_por_cuota,
@@ -376,51 +376,64 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                 st.write(f"**Entrega:** {v.get('fecha_entrega', 'N/A')}")
             with col2:
                 st.write(f"**Prenda:** {v['producto']} (Talla: {v['talla']} x{v['cantidad']})")
-                st.write(f"**Total USDT:** ${v['total_venta_usdt']:.2f} | **Total $ BCV:** ${v.get('total_venta_bcv', 0):.2f}")
+                st.write(f"**Total Venta:** ${v['total_venta_usdt']:.2f} USDT | ${v.get('total_venta_bcv', 0):.2f} BCV")
+                
+                # Calcular cuánto se ha pagado y cuánto resta
+                cuotas_detalle = v.get('detalle_cuotas', [])
+                total_pagado_usdt = sum(c.get('monto_pagado', 0) for c in cuotas_detalle)
+                resta_usdt = v['total_venta_usdt'] - total_pagado_usdt
+                
+                # Proporción para el BCV
+                tasa_bcv_ref = v.get('total_venta_bcv', 0) / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
+                resta_bcv = resta_usdt * tasa_bcv_ref
+                
+                st.markdown(f"🔴 **Resta por cobrar:** **${resta_usdt:.2f} USDT** | **${resta_bcv:.2f} BCV**")
                 
                 st.markdown("**Desglose de Cuotas y Abonos:**")
-                cuotas_detalle = v.get('detalle_cuotas', [])
-                
                 for c in cuotas_detalle:
                     nro_c = c['nro']
-                    monto_est = c.get('monto_estimado', 0)
                     monto_pag = c.get('monto_pagado', 0)
                     fecha_c = c['fecha']
                     pagada_c = c.get('pagada', False)
                     
                     if pagada_c:
-                        st.markdown(f"✅ ~~Cuota {nro_c}: Esperado ${monto_est:.2f} | Pagado: **${monto_pag:.2f}** (Vence: {fecha_c})~~ **[PAGADA]**")
+                        st.markdown(f"✅ ~~Cuota {nro_c} (Vence: {fecha_c}) | Abonado: **${monto_pag:.2f}**~~ **[PAGADA]**")
                     else:
-                        st.markdown(f"⏳ **Cuota {nro_c}:** Esperado ${monto_est:.2f} (Vence: {fecha_c})")
+                        st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
-                            abono_input = st.number_input(f"Monto que entrega el cliente:", min_value=0.0, value=float(monto_est), step=0.5, key=f"inp_abono_{v['id_venta']}_{nro_c}")
+                            abono_usdt = st.number_input(f"Monto abonado en USDT:", min_value=0.0, value=float(resta_usdt), step=0.5, key=f"inp_abono_usdt_{v['id_venta']}_{nro_c}")
+                            abono_bcv = st.number_input(f"Monto abonado en $ BCV:", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_abono_bcv_{v['id_venta']}_{nro_c}")
+                            
                             if st.button(f"Aplicar Abono Cuota #{nro_c}", key=f"btn_conf_{v['id_venta']}_{nro_c}"):
-                                dinero_restante = abono_input
-                                
-                                for idx_cuota in range(nro_c - 1, len(cuotas_detalle)):
-                                    cuota_actual = cuotas_detalle[idx_cuota]
-                                    if dinero_restante <= 0:
-                                        break
-                                    
-                                    deuda_cuota = cuota_actual['monto_estimado'] - cuota_actual.get('monto_pagado', 0.0)
-                                    
-                                    if dinero_restante >= deuda_cuota:
-                                        cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + deuda_cuota
-                                        cuota_actual['pagada'] = True
-                                        dinero_restante -= deuda_cuota
-                                    else:
-                                        cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + dinero_restante
-                                        dinero_restante = 0.0
-                                
-                                if all(item.get('pagada', False) for item in cuotas_detalle):
-                                    v['estado'] = "PAGADO"
-                                    st.success(f"¡Excelente! La venta #{v['id_venta']} ha sido saldada por completo.")
+                                if abono_usdt <= 0:
+                                    st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
-                                    st.success(f"¡Abono registrado! El excedente se distribuyó automáticamente en las cuotas siguientes.")
-                                
-                                guardar_datos(ARCHIVO_VENTAS, ventas)
-                                st.rerun()
+                                    dinero_restante = abono_usdt
+                                    
+                                    for idx_cuota in range(nro_c - 1, len(cuotas_detalle)):
+                                        cuota_actual = cuotas_detalle[idx_cuota]
+                                        if dinero_restante <= 0:
+                                            break
+                                        
+                                        deuda_cuota = cuota_actual['monto_estimado'] - cuota_actual.get('monto_pagado', 0.0)
+                                        
+                                        if dinero_restante >= deuda_cuota:
+                                            cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + deuda_cuota
+                                            cuota_actual['pagada'] = True
+                                            dinero_restante -= deuda_cuota
+                                        else:
+                                            cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + dinero_restante
+                                            dinero_restante = 0.0
+                                    
+                                    if all(item.get('pagada', False) for item in cuotas_detalle):
+                                        v['estado'] = "PAGADO"
+                                        st.success(f"¡Excelente! La venta #{v['id_venta']} ha sido saldada por completo.")
+                                    else:
+                                        st.success(f"¡Abono registrado! ${abono_usdt:.2f} USDT (${abono_bcv:.2f} BCV).")
+                                    
+                                    guardar_datos(ARCHIVO_VENTAS, ventas)
+                                    st.rerun()
 
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{v['id_venta']}"):
