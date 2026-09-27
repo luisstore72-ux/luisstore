@@ -504,7 +504,11 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
                             abono_usdt = st.number_input(f"Monto abonado (equivalente interno USDT):", min_value=0.0, value=float(resta_usdt), step=0.5, key=f"inp_abono_usdt_{v['id_venta']}_{nro_c}")
-                            abono_bcv = st.number_input(f"Monto abonado en $ a BCV:", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_abono_bcv_{v['id_venta']}_{nro_c}")
+                            abono_bcv = st.number_input(f"Monto abonado en $ a BCV (cálculo interno):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_abono_bcv_{v['id_venta']}_{nro_c}")
+                            
+                            st.markdown("---")
+                            st.markdown("✏️ **Personalizar Factura / Comprobante para el Cliente:**")
+                            monto_factura_bcv = st.number_input("Monto exacto en $ a BCV a mostrar en la factura:", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_fact_bcv_{v['id_venta']}_{nro_c}")
                             
                             if st.button(f"Aplicar Abono Cuota #{nro_c}", key=f"btn_conf_{v['id_venta']}_{nro_c}"):
                                 if abono_usdt <= 0 or abono_bcv <= 0:
@@ -546,7 +550,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Comprobante de Abono Limpio y Profesional (Para WhatsApp)
+                                    # Comprobante de Abono Limpio y Profesional con el monto editable
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
                                     factura_abono = f"""
@@ -562,7 +566,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         </div>
                                         <p style="margin-bottom:10px; font-size:13px; color:#333;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
                                         <div style="background:#f1f3f5; padding:12px; border-radius:6px; margin-bottom:15px;">
-                                            <p style="margin:0; font-size:14px; color:#008000;"><b>MONTO ABONADO:</b> ${abono_bcv:.2f} a BCV</p>
+                                            <p style="margin:0; font-size:14px; color:#008000;"><b>MONTO ABONADO:</b> ${monto_factura_bcv:.2f} a BCV</p>
                                             <p style="margin:5px 0 0 0; font-size:14px; color:#cc0000;"><b>RESTA POR PAGAR:</b> ${nueva_resta_bcv:.2f} a BCV</p>
                                         </div>
                                         <div style="text-align: center; font-size: 11px; color: #666;">
