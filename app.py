@@ -648,6 +648,11 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
                 resta_bcv_val = resta_u * tasa_ref
 
+                # Construcción limpia de la factura del historial sin fragmentar bloques HTML
+                texto_resta_html = ""
+                if v_encontrada['estado'] == "CUOTAS (Pendiente)":
+                    texto_resta_html = f'<p style="margin:4px 0; font-size:13px; color:#c62828;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>'
+
                 factura_historial = f"""
                 <div class="invoice-card">
                     <div class="invoice-header">
@@ -675,7 +680,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                     </table>
                     <div style="text-align: right; margin-top:15px;">
                         <p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {v_encontrada['estado']}</p>
-                        {"<p style='margin:4px 0; font-size:13px; color:#c62828;'><b>Resta por pagar:</b> $" + f"{resta_bcv_val:.2f}" + " a BCV</p>" if v_encontrada['estado'] == "CUOTAS (Pendiente)" else ""}
+                        {texto_resta_html}
                         <h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>
                     </div>
                     <hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">
