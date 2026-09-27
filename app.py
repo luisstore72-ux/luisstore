@@ -148,6 +148,16 @@ if menu == "🛒 Registrar Venta":
                         "fecha": fecha_entrega,
                         "pagada": True
                     }]
+                    
+                    # Si es de contado, ingresa automáticamente a Binance
+                    binance_data["saldo_actual"] += total_venta_usdt
+                    binance_data["movimientos"].append({
+                        "fecha": str(date.today()),
+                        "tipo": "Entrada USDT (Venta Contado)",
+                        "monto": total_venta_usdt,
+                        "descripcion": f"Venta Contado: {producto['nombre']} (Talla {producto['talla']} x{cantidad})"
+                    })
+                    guardar_binance(binance_data)
 
                 venta_reg = {
                     "id_venta": len(ventas) + 1,
@@ -173,7 +183,7 @@ if menu == "🛒 Registrar Venta":
                 guardar_datos(ARCHIVO_INVENTARIO, inventario)
                 guardar_datos(ARCHIVO_VENTAS, ventas)
                 
-                st.success("✅ ¡Venta registrada exitosamente!")
+                st.success("✅ ¡Venta registrada exitosamente y sincronizada con Binance!")
                 st.metric("Total Venta ($ USDT)", f"${total_venta_usdt:.2f}")
                 st.metric("Total Venta ($ a BCV)", f"${total_venta_bcv:.2f}")
                 if "Fiado" in tipo_pago:
@@ -305,18 +315,18 @@ elif menu == "✏️ Editar / Eliminar / Fotos (Inventario)":
 # 5. FONDOS DISPONIBLES EN BINANCE (100% MANUAL)
 # ---------------------------------------------------------
 elif menu == "🟡 Fondos Disponibles en Binance":
-    st.subheader("🟡 Control Manual de Fondos en Binance (USDT)")
+    st.subheader("🟡 Control Manual y Automático de Fondos en Binance (USDT)")
     
     saldo_actual = binance_data.get("saldo_actual", 0.0)
     st.metric("💰 Saldo Actual en Binance", f"${saldo_actual:,.2f} USDT")
     
     st.markdown("---")
-    st.subheader("➕ / ➖ Registrar Entrada o Salida de USDT")
+    st.subheader("➕ / ➖ Registrar Entrada o Salida de USDT Manual")
     
     with st.form("form_ajuste_binance"):
         tipo_mov = st.selectbox("Tipo de movimiento:", ["Entrada de USDT (Venta / Abono)", "Salida / Retiro (Ej: Compra 1688, Envío, Gastos)"])
         monto_mov = st.number_input("Monto exacto en USDT:", min_value=0.0, value=10.0, step=0.5)
-        desc_mov = st.text_input("Descripción (Ej: Venta de bermuda, Pago de flete, etc.)")
+        desc_mov = st.text_input("Descripción (Ej: Compra de mercancía, Pago de flete, etc.)")
         
         btn_ajuste = st.form_submit_button("Guardar en Binance")
         
@@ -426,23 +436,48 @@ elif menu == "📋 Cuentas por Cobrar (Fiados)":
                                             cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + dinero_restante
                                             dinero_restante = 0.0
                                     
+                                    # Registrar entrada automática en Binance por el abono recibido
+                                    binance_data["saldo_actual"] += abono_usdt
+                                    binance_data["movimientos"].append({
+                                        "fecha": str(date.today()),
+                                        "tipo": "Entrada USDT (Abono Fiado)",
+                                        "monto": abono_usdt,
+                                        "descripcion": f"Abono Cuota #{nro_c} - Cliente: {v['cliente']} (Venta #{v['id_venta']})"
+                                    })
+                                    guardar_binance(binance_data)
+                                    
                                     if all(item.get('pagada', False) for item in cuotas_detalle):
                                         v['estado'] = "PAGADO"
-                                        st.success(f"¡Excelente! La venta #{v['id_venta']} ha sido saldada por completo.")
+                                        st.success(f"¡Excelente! La venta #{v['id_venta']} ha sido saldada por completo y sumada a Binance.")
                                     else:
-                                        st.success(f"¡Abono registrado! ${abono_usdt:.2f} USDT (${abono_bcv:.2f} BCV).")
+                                        st.success(f"¡Abono de ${abono_usdt:.2f} USDT (${abono_bcv:.2f} BCV) registrado y sumado a Binance!")
                                     
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
                                     st.rerun()
 
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{v['id_venta']}"):
+                    # Calcular cuánto falta por pagar para sumarlo a Binance
+                    cuotas_detalle = v.get('detalle_cuotas', [])
+                    total_deuda_restante = sum(c.get('monto_estimado', 0) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
+                    
                     for c in cuotas_detalle:
                         c['monto_pagado'] = c.get('monto_estimado', 0)
                         c['pagada'] = True
                     v['estado'] = "PAGADO"
+                    
+                    if total_deuda_restante > 0:
+                        binance_data["saldo_actual"] += total_deuda_restante
+                        binance_data["movimientos"].append({
+                            "fecha": str(date.today()),
+                            "tipo": "Entrada USDT (Pago Total Fiado)",
+                            "monto": total_deuda_restante,
+                            "descripcion": f"Saldado completo Venta #{v['id_venta']} - Cliente: {v['cliente']}"
+                        })
+                        guardar_binance(binance_data)
+
                     guardar_datos(ARCHIVO_VENTAS, ventas)
-                    st.success(f"¡Venta #{v['id_venta']} marcada completamente como pagada!")
+                    st.success(f"¡Venta #{v['id_venta']} marcada como pagada y saldo agregado a Binance!")
                     st.rerun()
 
 # ---------------------------------------------------------
