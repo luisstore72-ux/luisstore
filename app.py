@@ -44,7 +44,7 @@ def guardar_binance(datos):
 # Configuración de la página web
 st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide")
 
-# Estilos CSS limpios, profesionales y diseño de factura nítido para captures
+# Estilos CSS limpios y profesionales para facturas y comprobantes
 st.markdown("""
     <style>
         .invoice-card {
@@ -237,7 +237,7 @@ if menu == "🛒 Registrar Venta":
                 
                 st.success("✅ ¡Venta registrada exitosamente!")
                 
-                # Factura Limpia Estilo Profesional (Lista para capture)
+                # Factura Limpia Estilo Profesional
                 st.markdown("---")
                 st.markdown("### 🧾 Factura Digital (Tómale capture para WhatsApp)")
                 
@@ -508,7 +508,8 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                             
                             st.markdown("---")
                             st.markdown("✏️ **Personalizar Factura / Comprobante para el Cliente:**")
-                            monto_factura_bcv = st.number_input("Monto exacto en $ a BCV a mostrar en la factura:", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_fact_bcv_{v['id_venta']}_{nro_c}")
+                            monto_factura_bcv = st.number_input("Monto abonado a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_fact_bcv_{v['id_venta']}_{nro_c}")
+                            resta_factura_bcv = st.number_input("Monto restante a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=f"inp_fact_resta_{v['id_venta']}_{nro_c}")
                             
                             if st.button(f"Aplicar Abono Cuota #{nro_c}", key=f"btn_conf_{v['id_venta']}_{nro_c}"):
                                 if abono_usdt <= 0 or abono_bcv <= 0:
@@ -540,17 +541,13 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     })
                                     guardar_binance(binance_data)
                                     
-                                    nuevo_total_pagado = sum(item.get('monto_pagado', 0) for item in cuotas_detalle)
-                                    nueva_resta_usdt = v['total_venta_usdt'] - nuevo_total_pagado
-                                    nueva_resta_bcv = nueva_resta_usdt * tasa_bcv_ref
-                                    
                                     if all(item.get('pagada', False) for item in cuotas_detalle):
                                         v['estado'] = "PAGADO"
                                         st.success(f"✅ ¡Venta #{v['id_venta']} saldada por completo!")
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Comprobante de Abono Limpio y Profesional con el monto editable
+                                    # Comprobante de Abono con Monto Abonado y Restante editables
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
                                     factura_abono = f"""
@@ -567,7 +564,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         <p style="margin-bottom:10px; font-size:13px; color:#333;"><b>Cliente:</b> {v['cliente']}<br><b>Producto:</b> {v['producto']} ({v['talla']})</p>
                                         <div style="background:#f1f3f5; padding:12px; border-radius:6px; margin-bottom:15px;">
                                             <p style="margin:0; font-size:14px; color:#008000;"><b>MONTO ABONADO:</b> ${monto_factura_bcv:.2f} a BCV</p>
-                                            <p style="margin:5px 0 0 0; font-size:14px; color:#cc0000;"><b>RESTA POR PAGAR:</b> ${nueva_resta_bcv:.2f} a BCV</p>
+                                            <p style="margin:5px 0 0 0; font-size:14px; color:#cc0000;"><b>RESTA POR PAGAR:</b> ${resta_factura_bcv:.2f} a BCV</p>
                                         </div>
                                         <div style="text-align: center; font-size: 11px; color: #666;">
                                             Pedidos: 0412-4543304 | Instagram: @luisstore.ve<br>
