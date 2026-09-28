@@ -211,7 +211,7 @@ if menu == "🛒 Registrar Venta":
                 cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
                 
                 monto_por_cuota_usdt_ref = total_usdt_carrito / cuotas
-                monto_por_cuota_bcv_ref = total_bcv_carrito / cuotas
+                tasa_ref_temp = total_usdt_carrito / total_bcv_carrito if total_bcv_carrito > 0 else 1.0
 
                 st.markdown("📝 **Indica la fecha límite y el monto exacto para cada cuota a tu preferencia:**")
                 for c in range(1, cuotas + 1):
@@ -219,15 +219,11 @@ if menu == "🛒 Registrar Venta":
                     with col_fc:
                         f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
                     with col_mc:
-                        m_cuota_bcv = st.number_input(f"Monto cuota #{c} ($ a BCV):", min_value=0.0, value=float(monto_por_cuota_bcv_ref), step=0.5, key=f"cuota_m_{c}")
-                    
-                    # Calcular su proporción equivalente en USDT para mantener sincronizada la contabilidad interna
-                    tasa_ref_temp = total_usdt_carrito / total_bcv_carrito if total_bcv_carrito > 0 else 1.0
-                    m_cuota_usdt = m_cuota_bcv * tasa_ref_temp
+                        m_cuota_usdt_input = st.number_input(f"Monto cuota #{c} (USDT):", min_value=0.0, value=float(monto_por_cuota_usdt_ref), step=0.5, key=f"cuota_m_{c}")
 
                     detalle_cuotas.append({
                         "nro": c,
-                        "monto_estimado": m_cuota_usdt,
+                        "monto_estimado": m_cuota_usdt_input,
                         "monto_pagado": 0.0,
                         "fecha": str(f_cuota),
                         "pagada": False
@@ -576,14 +572,13 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                     fecha_c = c['fecha']
                     pagada_c = c.get('pagada', False)
                     
-                    # Calcular el valor de esta cuota en BCV para mostrarlo claramente
-                    monto_estimado_usdt = c.get('monto_estimado', 0)
-                    monto_estimado_bcv_ref = monto_estimado_usdt * tasa_bcv_ref
+                    monto_est_usdt = c.get('monto_estimado', c.get('monto_estimado_bcv', 0))
+                    monto_est_bcv = monto_est_usdt * tasa_bcv_ref
 
                     if pagada_c:
-                        st.markdown(f"✅ ~~Cuota {nro_c} (${monto_estimado_bcv_ref:.2f} a BCV | Vence: {fecha_c}) | Pagada~~ **[PAGADA]**")
+                        st.markdown(f"✅ ~~Cuota {nro_c} (Vence: {fecha_c}) | Pagada~~ **[PAGADA]**")
                     else:
-                        st.markdown(f"⏳ **Cuota {nro_c}:** ${monto_estimado_bcv_ref:.2f} a BCV | Vence el {fecha_c}")
+                        st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
                             key_abono_usdt = f"abono_usdt_{idx_v}_v{v['id_venta']}_c{nro_c}"
@@ -592,10 +587,9 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                             key_fact_resta = f"fact_resta_{idx_v}_v{v['id_venta']}_c{nro_c}"
                             key_btn_conf = f"btn_conf_{idx_v}_v{v['id_venta']}_c{nro_c}"
 
-                            deuda_esta_cuota_usdt = monto_estimado_usdt - monto_pag
-                            deuda_esta_cuota_bcv = deuda_esta_cuota_usdt * tasa_bcv_ref
+                            deuda_esta_cuota = monto_est_usdt - monto_pag
                             
-                            abono_usdt = st.number_input(f"Monto abonado (USDT):", min_value=0.0, value=float(deuda_esta_cuota_usdt), step=0.5, key=key_abono_usdt)
+                            abono_usdt = st.number_input(f"Monto abonado (USDT):", min_value=0.0, value=float(deuda_esta_cuota), step=0.5, key=key_abono_usdt)
                             abono_bcv = st.number_input(f"Monto abonado ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_abono_bcv)
                             
                             st.markdown("---")
@@ -614,7 +608,8 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         if dinero_restante <= 0:
                                             break
                                         
-                                        deuda_cuota = cuota_actual['monto_estimado'] - cuota_actual.get('monto_pagado', 0.0)
+                                        est_cuota_val = cuota_actual.get('monto_estimado', cuota_actual.get('monto_estimado_bcv', 0))
+                                        deuda_cuota = est_cuota_val - cuota_actual.get('monto_pagado', 0.0)
                                         
                                         if dinero_restante >= deuda_cuota:
                                             cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + deuda_cuota
@@ -670,10 +665,10 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
                     cuotas_detalle = v.get('detalle_cuotas', [])
-                    total_deuda_restante = sum(c.get('monto_estimado', 0) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
+                    total_deuda_restante = sum(c.get('monto_estimado', c.get('monto_estimado_bcv', 0)) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
                     
                     for c in cuotas_detalle:
-                        c['monto_pagado'] = c.get('monto_estimado', 0)
+                        c['monto_pagado'] = c.get('monto_estimado', c.get('monto_estimado_bcv', 0))
                         c['pagada'] = True
                     v['estado'] = "PAGADO"
                     
