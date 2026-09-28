@@ -127,7 +127,6 @@ if menu == "🛒 Registrar Venta":
     if not inventario:
         st.warning("⚠️ No hay productos en el inventario para vender. Ve primero a 'Agregar Nuevo Producto / Talla'.")
     else:
-        # Selección del producto a agregar al carrito
         opciones_prod = [f"ID {i}: {p['nombre']} - Talla: {p['talla']} (Stock: {p['stock']} | USDT: ${p['precio_usdt']} | $ BCV: ${p.get('precio_bcv', 0)})" for i, p in enumerate(inventario)]
         seleccion = st.selectbox("Selecciona un producto para agregar al carrito:", opciones_prod)
         idx = int(seleccion.split(":")[0].replace("ID", "").strip())
@@ -143,7 +142,6 @@ if menu == "🛒 Registrar Venta":
             if producto_elegido['stock'] < cantidad_a_vender:
                 st.error("❌ Stock insuficiente para agregar esa cantidad.")
             else:
-                # Ver si ya está en el carrito para sumar la cantidad
                 en_carrito = False
                 for item in st.session_state.carrito_ventas:
                     if item['id_inventario'] == idx:
@@ -174,7 +172,6 @@ if menu == "🛒 Registrar Venta":
         if not st.session_state.carrito_ventas:
             st.info("El carrito de compras está vacío. Agrega productos arriba.")
         else:
-            # Mostrar tabla resumen del carrito
             total_usdt_carrito = 0
             total_bcv_carrito = 0
             
@@ -229,7 +226,6 @@ if menu == "🛒 Registrar Venta":
                     })
 
             if st.button("Confirmar y Registrar Venta Total"):
-                # Validar stock una última vez antes de descontar
                 stock_suficiente = True
                 for item in st.session_state.carrito_ventas:
                     prod_inv = inventario[item['id_inventario']]
@@ -239,10 +235,8 @@ if menu == "🛒 Registrar Venta":
                         break
                 
                 if stock_suficiente:
-                    # Descontar stock de cada producto en el inventario real
                     inversion_total_lote = 0
                     ganancia_total_lote = 0
-                    
                     productos_resumen_factura = []
                     
                     for item in st.session_state.carrito_ventas:
@@ -277,7 +271,6 @@ if menu == "🛒 Registrar Venta":
                         })
                         guardar_binance(binance_data)
 
-                    # Registrar como una venta global consolidada
                     venta_reg = {
                         "id_venta": len(ventas) + 1,
                         "producto": " / ".join(productos_resumen_factura),
@@ -299,12 +292,10 @@ if menu == "🛒 Registrar Venta":
                     guardar_datos(ARCHIVO_INVENTARIO, inventario)
                     guardar_datos(ARCHIVO_VENTAS, ventas)
                     
-                    # Vaciar carrito actual
                     st.session_state.carrito_ventas = []
                     
                     st.success("✅ ¡Venta multiproducto registrada exitosamente!")
                     
-                    # Factura Elegante Estilo Premium (Fondo blanco optimizado)
                     st.markdown("---")
                     st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture para WhatsApp)")
                     
@@ -583,15 +574,21 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                         st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
-                            abono_usdt = st.number_input(f"Monto abonado (equivalente interno USDT):", min_value=0.0, value=float(resta_usdt), step=0.5, key=f"inp_abono_usdt_{v['id_venta']}_{nro_c}")
-                            abono_bcv = st.number_input(f"Monto abonado en $ a BCV (cálculo interno):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_abono_bcv_{v['id_venta']}_{nro_c}")
+                            key_abono_usdt = f"inp_abono_usdt_{v['id_venta']}_{nro_c}"
+                            key_abono_bcv = f"inp_abono_bcv_{v['id_venta']}_{nro_c}"
+                            key_fact_bcv = f"inp_fact_bcv_{v['id_venta']}_{nro_c}"
+                            key_fact_resta = f"inp_fact_resta_{v['id_venta']}_{nro_c}"
+                            key_btn_conf = f"btn_conf_{v['id_venta']}_{nro_c}"
+
+                            abono_usdt = st.number_input(f"Monto abonado (equivalente interno USDT):", min_value=0.0, value=float(resta_usdt), step=0.5, key=key_abono_usdt)
+                            abono_bcv = st.number_input(f"Monto abonado en $ a BCV (cálculo interno):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_abono_bcv)
                             
                             st.markdown("---")
                             st.markdown("✏️ **Personalizar Comprobante para el Cliente:**")
-                            monto_factura_bcv = st.number_input("Monto abonado a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=f"inp_fact_bcv_{v['id_venta']}_{nro_c}")
-                            resta_factura_bcv = st.number_input("Monto restante a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=f"inp_fact_resta_{v['id_venta']}_{nro_c}")
+                            monto_factura_bcv = st.number_input("Monto abonado a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_fact_bcv)
+                            resta_factura_bcv = st.number_input("Monto restante a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=key_fact_resta)
                             
-                            if st.button(f"Aplicar Abono Cuota #{nro_c}", key=f"btn_conf_{v['id_venta']}_{nro_c}"):
+                            if st.button(f"Aplicar Abono Cuota #{nro_c}", key=key_btn_conf):
                                 if abono_usdt <= 0 or abono_bcv <= 0:
                                     st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
@@ -627,7 +624,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Comprobante de Abono Elegante Estilo Premium
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
                                     factura_abono = (
@@ -713,7 +709,6 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 if v_encontrada['estado'] == "CUOTAS (Pendiente)":
                     texto_resta_html = f'<p style="margin:4px 0; font-size:13px; color:#c62828;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>'
 
-                # Generar filas de factura histórica según si tiene items múltiples o individuales
                 filas_hist = ""
                 if "items_carrito" in v_encontrada:
                     for itm in v_encontrada["items_carrito"]:
