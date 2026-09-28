@@ -210,7 +210,7 @@ if menu == "🛒 Registrar Venta":
                 fecha_entrega_obj = st.date_input("Fecha de Entrega del Producto:", value=date.today())
                 fecha_entrega = str(fecha_entrega_obj)
                     
-                cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
+                cuotas = st.selectbox("Número de Cuotas (Sin límite estricto):", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
                 
                 monto_por_cuota_usdt = total_usdt_carrito / cuotas
 
@@ -525,7 +525,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
                 st.rerun()
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS) — RESTA EXACTA EN BCV CORREGIDA
+# 6. CUENTAS POR COBRAR (CUOTAS) — SIN LÍMITES Y LIBRE DE ERRORES DE NEGATIVOS
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -554,7 +554,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
                 
-                # CÁLCULO DE RESTA EXACTO: Se resta directo lo que se abona en BCV del total de la venta
                 tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
                 total_pagado_bcv = sum(c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_bcv_ref) for c in cuotas_detalle)
                 resta_bcv = total_bcv_ref - total_pagado_bcv
@@ -582,23 +581,21 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
 
                             deuda_esta_cuota = c['monto_estimado'] - monto_pag
                             
-                            abono_usdt = st.number_input(f"Monto abonado (USDT):", min_value=0.0, value=float(deuda_esta_cuota), step=0.5, key=key_abono_usdt)
-                            abono_bcv = st.number_input(f"Monto abonado ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_abono_bcv)
+                            abono_usdt = st.number_input(f"Monto abonado (USDT):", value=float(deuda_esta_cuota), step=0.5, key=key_abono_usdt)
+                            abono_bcv = st.number_input(f"Monto abonado ($ a BCV):", value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_abono_bcv)
                             
                             st.markdown("---")
                             st.markdown("✏️ **Personalizar Comprobante para el Cliente:**")
-                            monto_factura_bcv = st.number_input("Monto a mostrar en factura ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_fact_bcv)
-                            resta_factura_bcv = st.number_input("Resta a mostrar en factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=key_fact_resta)
+                            monto_factura_bcv = st.number_input("Monto a mostrar en factura ($ a BCV):", value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_fact_bcv)
+                            resta_factura_bcv = st.number_input("Resta a mostrar en factura ($ a BCV):", value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=key_fact_resta)
                             
                             if st.button(f"Aplicar Abono Cuota #{nro_c}", key=key_btn_conf):
                                 if abono_usdt <= 0 or abono_bcv <= 0:
                                     st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
-                                    # Registrar el abono exacto en la cuota y guardar su equivalente en BCV
                                     c['monto_pagado'] = monto_pag + abono_usdt
                                     c['monto_pagado_bcv'] = c.get('monto_pagado_bcv', 0.0) + abono_bcv
                                     
-                                    # Si lo abonado cubre o supera el estimado de esta cuota, marcarla como pagada
                                     if c['monto_pagado'] >= c['monto_estimado'] - 0.01:
                                         c['pagada'] = True
                                     
