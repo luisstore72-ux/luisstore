@@ -528,7 +528,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
                 st.rerun()
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS) — FORMATO ORIGINAL CON CÁLCULO EXACTO CORREGIDO
+# 6. CUENTAS POR COBRAR (CUOTAS) — ABONOS INDEPENDIENTES Y CÁLCULO EXACTO
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -580,7 +580,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                     if pagada_c:
                         st.markdown(f"✅ ~~Cuota {nro_c} (Vence: {fecha_c}) | Pagada~~ **[PAGADA]**")
                     else:
-                        st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
+                        st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c} (Resta cuota: ${deuda_cuota_bcv:.2f} a BCV)")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
                             key_abono_usdt = f"abono_usdt_{idx_v}_v{v['id_venta']}_c{nro_c}"
@@ -601,26 +601,17 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                 if abono_usdt <= 0 or abono_bcv <= 0:
                                     st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
-                                    dinero_restante_bcv = abono_bcv
+                                    # Aplicar el abono ÚNICAMENTE a esta cuota específica (sin afectar las demás)
+                                    cuota_actual = cuotas_detalle[nro_c - 1]
+                                    pag_bcv_val = cuota_actual.get('monto_pagado_bcv', cuota_actual.get('monto_pagado', 0) * tasa_bcv_ref)
                                     
-                                    for idx_cuota in range(nro_c - 1, len(cuotas_detalle)):
-                                        cuota_actual = cuotas_detalle[idx_cuota]
-                                        if dinero_restante_bcv <= 0:
-                                            break
-                                        
-                                        est_bcv_val = cuota_actual.get('monto_estimado', 0) * tasa_bcv_ref
-                                        pag_bcv_val = cuota_actual.get('monto_pagado_bcv', cuota_actual.get('monto_pagado', 0) * tasa_bcv_ref)
-                                        deuda_cuota = est_bcv_val - pag_bcv_val
-                                        
-                                        if dinero_restante_bcv >= deuda_cuota:
-                                            cuota_actual['monto_pagado_bcv'] = pag_bcv_val + deuda_cuota
-                                            cuota_actual['monto_pagado'] = cuota_actual['monto_pagado_bcv'] / tasa_bcv_ref if tasa_bcv_ref > 0 else 0
-                                            cuota_actual['pagada'] = True
-                                            dinero_restante_bcv -= deuda_cuota
-                                        else:
-                                            cuota_actual['monto_pagado_bcv'] = pag_bcv_val + dinero_restante_bcv
-                                            cuota_actual['monto_pagado'] = cuota_actual['monto_pagado_bcv'] / tasa_bcv_ref if tasa_bcv_ref > 0 else 0
-                                            dinero_restante_bcv = 0.0
+                                    nueva_pag_bcv = pag_bcv_val + abono_bcv
+                                    cuota_actual['monto_pagado_bcv'] = nueva_pag_bcv
+                                    cuota_actual['monto_pagado'] = nueva_pag_bcv / tasa_bcv_ref if tasa_bcv_ref > 0 else 0
+                                    
+                                    # Verificar si esta cuota quedó saldada por completo
+                                    if nueva_pag_bcv >= monto_est_bcv - 0.01:
+                                        cuota_actual['pagada'] = True
                                     
                                     binance_data["saldo_actual"] += abono_usdt
                                     binance_data["movimientos"].append({
@@ -631,11 +622,12 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     })
                                     guardar_binance(binance_data)
                                     
+                                    # Verificar si TODAS las cuotas de la venta están pagadas
                                     if all(item.get('pagada', False) for item in cuotas_detalle):
                                         v['estado'] = "PAGADO"
                                         st.success(f"✅ ¡Venta #{v['id_venta']} saldada por completo!")
                                     else:
-                                        st.success(f"✅ ¡Abono registrado con éxito!")
+                                        st.success(f"✅ ¡Abono registrado con éxito en la Cuota #{nro_c}!")
 
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
@@ -664,6 +656,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     st.markdown(factura_abono, unsafe_allow_html=True)
                                     
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
+                                    st.rerun()
 
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
