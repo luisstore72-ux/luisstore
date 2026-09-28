@@ -311,20 +311,26 @@ if menu == "🛒 Registrar Venta":
                     st.success("✅ ¡Venta multiproducto registrada exitosamente!")
                     
                     st.markdown("---")
-                    st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture o envíala por WhatsApp)")
+                    st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture y envíala por WhatsApp)")
                     
                     if telefono_cliente.strip():
                         tel_limpio = ''.join(filter(str.isdigit, telefono_cliente.strip()))
                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
                             tel_limpio = "58" + tel_limpio
                         
-                        msg_wa = f"Hola {cliente}, te enviamos el detalle de tu factura N° #{venta_reg['id_venta']} de LUIS STORE. Total: ${total_bcv_carrito:.2f} BCV. ¡Gracias por tu compra!"
+                        # Mensaje detallado para WhatsApp
+                        msg_wa = f"🔥 *LUIS STORE* 🔥\nFactura N° #{venta_reg['id_venta']}\nCliente: {cliente}\nFecha: {fecha_entrega}\n\n*Detalle de compra:*\n"
+                        for itm in venta_reg["items_carrito"]:
+                            sub_b = itm.get('precio_bcv', 0) * itm['cantidad']
+                            msg_wa += f"• {itm['cantidad']}x {itm['nombre']} (Talla {itm['talla']}) - ${sub_b:.2f} BCV\n"
+                        msg_wa += f"\n*Condición:* {estado}\n*TOTAL A PAGAR:* ${total_bcv_carrito:.2f} a BCV\n\n¡Gracias por tu compra en Luis Store! 🚀"
+                        
                         url_whatsapp = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_wa)}"
-                        st.markdown(f'<a href="{url_whatsapp}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px; margin-bottom:15px;">💬 Enviar Factura por WhatsApp al {telefono_cliente}</button></a>', unsafe_allow_html=True)
+                        st.markdown(f'<a href="{url_whatsapp}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px; margin-bottom:15px;">💬 Enviar Detalle por WhatsApp al {telefono_cliente}</button></a>', unsafe_allow_html=True)
 
                     filas_tabla_factura = ""
                     for itm in venta_reg["items_carrito"]:
-                        sub_bcv_f = item['precio_bcv'] * itm['cantidad'] if 'precio_bcv' in itm else 0
+                        sub_bcv_f = itm.get('precio_bcv', 0) * itm['cantidad']
                         filas_tabla_factura += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td>${itm.get("precio_bcv", 0):.2f}</td><td><b>${sub_bcv_f:.2f}</b></td></tr>'
 
                     factura_html = (
