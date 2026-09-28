@@ -94,6 +94,15 @@ inventario = cargar_datos(ARCHIVO_INVENTARIO)
 ventas = cargar_datos(ARCHIVO_VENTAS)
 binance_data = cargar_binance()
 
+# Blindaje de ventas viejas para evitar errores de claves faltantes
+for v in ventas:
+    if 'telefono' not in v:
+        v['telefono'] = ""
+    if 'cliente' not in v:
+        v['cliente'] = "Cliente General"
+    if 'total_venta_bcv' not in v:
+        v['total_venta_bcv'] = v.get('total_venta_usdt', 0.0)
+
 # Inicializar el carrito temporal de ventas múltiples en la sesión de Streamlit
 if 'carrito_ventas' not in st.session_state:
     st.session_state.carrito_ventas = []
@@ -309,19 +318,14 @@ if menu == "🛒 Registrar Venta":
                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
                             tel_limpio = "58" + tel_limpio
                         
-                        msg_wa = f"🔥 *LUIS STORE* 🔥\nHola *{cliente}*, te enviamos el detalle de tu factura N° #{venta_reg['id_venta']}:\n\n"
-                        for itm in venta_reg["items_carrito"]:
-                            sub_b = itm['precio_bcv'] * itm['cantidad']
-                            msg_wa += f"• {itm['cantidad']}x {itm['nombre']} (Talla {itm['talla']}) - ${sub_b:.2f} BCV\n"
-                        msg_wa += f"\n*TOTAL:* ${total_bcv_carrito:.2f} a BCV\n*Condición:* {estado}\n\n¡Gracias por tu compra en Luis Store! 🚀"
-                        
+                        msg_wa = f"Hola {cliente}, te enviamos el detalle de tu factura N° #{venta_reg['id_venta']} de LUIS STORE. Total: ${total_bcv_carrito:.2f} BCV. ¡Gracias por tu compra!"
                         url_whatsapp = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_wa)}"
                         st.markdown(f'<a href="{url_whatsapp}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px; margin-bottom:15px;">💬 Enviar Factura por WhatsApp al {telefono_cliente}</button></a>', unsafe_allow_html=True)
 
                     filas_tabla_factura = ""
                     for itm in venta_reg["items_carrito"]:
-                        sub_bcv_f = itm['precio_bcv'] * itm['cantidad']
-                        filas_tabla_factura += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td>${itm["precio_bcv"]:.2f}</td><td><b>${sub_bcv_f:.2f}</b></td></tr>'
+                        sub_bcv_f = item['precio_bcv'] * itm['cantidad'] if 'precio_bcv' in itm else 0
+                        filas_tabla_factura += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td>${itm.get("precio_bcv", 0):.2f}</td><td><b>${sub_bcv_f:.2f}</b></td></tr>'
 
                     factura_html = (
                         '<div class="invoice-card">'
@@ -574,7 +578,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
-                tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
+                tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v.get('total_venta_usdt', 0) > 0 else 0
                 
                 total_pagado_bcv = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_detalle)
                 resta_bcv = total_bcv_ref - total_pagado_bcv
@@ -640,7 +644,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         tel_limpio = ''.join(filter(str.isdigit, v['telefono']))
                                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
                                             tel_limpio = "58" + tel_limpio
-                                        msg_abono = f"🔥 *LUIS STORE* 🔥\nHola *{v.get('cliente', 'Cliente')}*, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}):\n\n• *Abonado:* ${monto_factura_bcv:.2f} BCV\n• *Restante:* ${resta_factura_bcv:.2f} BCV\n\n¡Gracias por tu pago! 🚀"
+                                        msg_abono = f"Hola {v.get('cliente', 'Cliente')}, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}). Abonado: ${monto_factura_bcv:.2f} BCV. Restante: ${resta_factura_bcv:.2f} BCV. ¡Gracias!"
                                         url_wa_abono = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_abono)}"
                                         st.markdown(f'<a href="{url_wa_abono}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:10px;">💬 Enviar Comprobante por WhatsApp</button></a>', unsafe_allow_html=True)
 
@@ -706,11 +710,6 @@ elif menu == "📊 Historial, Facturación & Finanzas":
     if not ventas:
         st.info("No hay ventas registradas todavía.")
     else:
-        # Asegurar que todas las ventas tengan la clave 'telefono' para que la tabla no falle
-        for v in ventas:
-            if 'telefono' not in v:
-                v['telefono'] = ""
-                
         df_ventas = pd.DataFrame(ventas)
         st.dataframe(df_ventas[['id_venta', 'cliente', 'telefono', 'producto', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
         
@@ -726,7 +725,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
             if v_encontrada:
                 total_bcv_val = v_encontrada.get('total_venta_bcv', 0)
                 cuotas_d = v_encontrada.get('detalle_cuotas', [])
-                tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
+                tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada.get('total_venta_usdt', 0) > 0 else 0
                 
                 total_pagado_bcv_val = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_d)
                 resta_bcv_val = total_bcv_val - total_pagado_bcv_val
@@ -735,7 +734,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                     tel_h = ''.join(filter(str.isdigit, v_encontrada['telefono']))
                     if not tel_h.startswith("58") and len(tel_h) == 10:
                         tel_h = "58" + tel_h
-                    msg_h = f"🔥 *LUIS STORE* 🔥\nHola *{v_encontrada.get('cliente', 'Cliente')}*, aquí tienes el detalle de tu factura N° #{v_encontrada['id_venta']}:\n• *Total:* ${total_bcv_val:.2f} BCV\n• *Estado:* {v_encontrada['estado']}\n¡Gracias por tu preferencia! 🚀"
+                    msg_h = f"Hola {v_encontrada.get('cliente', 'Cliente')}, detalle de factura N° #{v_encontrada['id_venta']}: Total: ${total_bcv_val:.2f} BCV. Estado: {v_encontrada['estado']}. ¡Gracias!"
                     url_wa_h = f"https://wa.me/{tel_h}?text={urllib.parse.quote(msg_h)}"
                     st.markdown(f'<a href="{url_wa_h}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:15px;">💬 Enviar esta Factura por WhatsApp</button></a>', unsafe_allow_html=True)
 
@@ -746,7 +745,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 filas_hist = ""
                 if "items_carrito" in v_encontrada:
                     for itm in v_encontrada["items_carrito"]:
-                        sub_bcv_h = itm['precio_bcv'] * itm['cantidad']
+                        sub_bcv_h = itm.get('precio_bcv', 0) * itm['cantidad']
                         filas_hist += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td><b>${sub_bcv_h:.2f}</b></td></tr>'
                 else:
                     filas_hist += f'<tr><td>{v_encontrada["cantidad"]}</td><td>{v_encontrada["producto"]} (Talla: {v_encontrada["talla"]})</td><td><b>${total_bcv_val:.2f}</b></td></tr>'
