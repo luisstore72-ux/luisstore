@@ -318,12 +318,12 @@ if menu == "🛒 Registrar Venta":
                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
                             tel_limpio = "58" + tel_limpio
                         
-                        # Mensaje detallado para WhatsApp
+                        # Mensaje formal corporativo con la nota de que en breve se le enviará la imagen de la factura
                         msg_wa = f"🔥 *LUIS STORE* 🔥\nFactura N° #{venta_reg['id_venta']}\nCliente: {cliente}\nFecha: {fecha_entrega}\n\n*Detalle de compra:*\n"
                         for itm in venta_reg["items_carrito"]:
                             sub_b = itm.get('precio_bcv', 0) * itm['cantidad']
                             msg_wa += f"• {itm['cantidad']}x {itm['nombre']} (Talla {itm['talla']}) - ${sub_b:.2f} BCV\n"
-                        msg_wa += f"\n*Condición:* {estado}\n*TOTAL A PAGAR:* ${total_bcv_carrito:.2f} a BCV\n\n¡Gracias por tu compra en Luis Store! 🚀"
+                        msg_wa += f"\n*Condición:* {estado}\n*TOTAL A PAGAR:* ${total_bcv_carrito:.2f} a BCV\n\n¡Gracias por tu compra en Luis Store! 🚀\n_En breve te enviaremos la imagen de tu factura digital generada desde nuestro sistema._"
                         
                         url_whatsapp = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_wa)}"
                         st.markdown(f'<a href="{url_whatsapp}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px; margin-bottom:15px;">💬 Enviar Detalle por WhatsApp al {telefono_cliente}</button></a>', unsafe_allow_html=True)
@@ -650,7 +650,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         tel_limpio = ''.join(filter(str.isdigit, v['telefono']))
                                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
                                             tel_limpio = "58" + tel_limpio
-                                        msg_abono = f"Hola {v.get('cliente', 'Cliente')}, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}). Abonado: ${monto_factura_bcv:.2f} BCV. Restante: ${resta_factura_bcv:.2f} BCV. ¡Gracias!"
+                                        msg_abono = f"Hola {v.get('cliente', 'Cliente')}, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}). Abonado: ${monto_factura_bcv:.2f} BCV. Restante: ${resta_factura_bcv:.2f} BCV. ¡Gracias!\n_En breve te enviaremos la imagen de tu recibo._"
                                         url_wa_abono = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_abono)}"
                                         st.markdown(f'<a href="{url_wa_abono}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:10px;">💬 Enviar Comprobante por WhatsApp</button></a>', unsafe_allow_html=True)
 
@@ -740,7 +740,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                     tel_h = ''.join(filter(str.isdigit, v_encontrada['telefono']))
                     if not tel_h.startswith("58") and len(tel_h) == 10:
                         tel_h = "58" + tel_h
-                    msg_h = f"Hola {v_encontrada.get('cliente', 'Cliente')}, detalle de factura N° #{v_encontrada['id_venta']}: Total: ${total_bcv_val:.2f} BCV. Estado: {v_encontrada['estado']}. ¡Gracias!"
+                    msg_h = f"Hola {v_encontrada.get('cliente', 'Cliente')}, detalle de factura N° #{v_encontrada['id_venta']}: Total: ${total_bcv_val:.2f} BCV. Estado: {v_encontrada['estado']}. ¡Gracias!\n_En breve te enviaremos la imagen de tu factura digital._"
                     url_wa_h = f"https://wa.me/{tel_h}?text={urllib.parse.quote(msg_h)}"
                     st.markdown(f'<a href="{url_wa_h}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:15px;">💬 Enviar esta Factura por WhatsApp</button></a>', unsafe_allow_html=True)
 
