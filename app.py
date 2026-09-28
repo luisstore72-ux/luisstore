@@ -93,11 +93,9 @@ inventario = cargar_datos(ARCHIVO_INVENTARIO)
 ventas = cargar_datos(ARCHIVO_VENTAS)
 binance_data = cargar_binance()
 
-# Inicializar el carrito temporal de ventas múltiples en la sesión de Streamlit
 if 'carrito_ventas' not in st.session_state:
     st.session_state.carrito_ventas = []
 
-# Barra lateral con el Logo y Navegación
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, use_container_width=True)
@@ -212,14 +210,22 @@ if menu == "🛒 Registrar Venta":
                     
                 cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
                 
-                monto_por_cuota_usdt = total_usdt_carrito / cuotas
+                monto_por_cuota_ref = total_bcv_carrito / cuotas
+                tasa_ref_temp = total_usdt_carrito / total_bcv_carrito if total_bcv_carrito > 0 else 1.0
 
-                st.markdown("📝 **Indica la fecha límite para cada cuota:**")
+                st.markdown("📝 **Indica la fecha límite y el monto exacto para cada cuota a tu preferencia:**")
                 for c in range(1, cuotas + 1):
-                    f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
+                    col_fc, col_mc = st.columns(2)
+                    with col_fc:
+                        f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
+                    with col_mc:
+                        m_cuota_bcv = st.number_input(f"Monto cuota #{c} ($ a BCV):", min_value=0.0, value=float(monto_por_cuota_ref), step=0.5, key=f"cuota_m_{c}")
+                    
+                    m_cuota_usdt = m_cuota_bcv * tasa_ref_temp
+
                     detalle_cuotas.append({
                         "nro": c,
-                        "monto_estimado": monto_por_cuota_usdt,
+                        "monto_estimado": m_cuota_usdt,
                         "monto_pagado": 0.0,
                         "fecha": str(f_cuota),
                         "pagada": False
@@ -525,7 +531,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
                 st.rerun()
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS) — CON CÁLCULO EXACTO CORREGIDO EN BCV
+# 6. CUENTAS POR COBRAR (CUOTAS) — CORREGIDO EXACTO EN BCV
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -553,8 +559,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
-                
-                # CÁLCULO EXACTO DIRECTO EN BCV: Sumar la deuda pendiente de cada cuota directamente en dólares BCV
                 tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
                 
                 total_pagado_bcv = sum(c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_bcv_ref) for c in cuotas_detalle)
@@ -617,7 +621,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                             cuota_actual['monto_pagado'] = cuota_actual['monto_pagado_bcv'] / tasa_bcv_ref if tasa_bcv_ref > 0 else 0
                                             dinero_restante_bcv = 0.0
                                     
-                                    # Equivalente en USDT para sumar correctamente a Binance
                                     abono_usdt_equivalente = abono_bcv / tasa_bcv_ref if tasa_bcv_ref > 0 else abono_bcv
                                     
                                     binance_data["saldo_actual"] += abono_usdt_equivalente
