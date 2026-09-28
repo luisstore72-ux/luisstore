@@ -3,6 +3,7 @@ import os
 import streamlit as st
 import pandas as pd
 from datetime import date
+import urllib.parse
 
 # Archivos de datos independientes para inventario, ventas y finanzas
 ARCHIVO_INVENTARIO = "inventario_tallas.json"
@@ -195,18 +196,19 @@ if menu == "🛒 Registrar Venta":
             st.markdown(f"*(Equivalente interno: ${total_usdt_carrito:.2f} USDT)*")
             
             st.markdown("---")
+            cliente = st.text_input("Nombre del Cliente:", value="")
+            telefono_cliente = st.text_input("Número de Teléfono / WhatsApp del Cliente (Ej: 04124543304 o +584124543304):", value="")
+            
             tipo_pago = st.radio("Condición de pago para toda la compra:", ["Contado (Pagado de una vez)", "Venta por Cuotas (Pendiente)"])
             
-            cliente = "Contado"
+            if not cliente.strip():
+                cliente = "Cliente General"
+                
             fecha_entrega = str(date.today())
             cuotas = 1
             detalle_cuotas = []
             
             if "Cuotas" in tipo_pago:
-                cliente = st.text_input("Nombre del Cliente:", value="")
-                if not cliente.strip():
-                    cliente = "Cliente General"
-                
                 fecha_entrega_obj = st.date_input("Fecha de Entrega del Producto:", value=date.today())
                 fecha_entrega = str(fecha_entrega_obj)
                     
@@ -284,6 +286,7 @@ if menu == "🛒 Registrar Venta":
                         "reinversion_usdt": inversion_total_lote,
                         "estado": estado,
                         "cliente": cliente,
+                        "telefono": telefono_cliente.strip(),
                         "fecha_entrega": fecha_entrega,
                         "cuotas": cuotas,
                         "detalle_cuotas": detalle_cuotas,
@@ -299,8 +302,24 @@ if menu == "🛒 Registrar Venta":
                     st.success("✅ ¡Venta multiproducto registrada exitosamente!")
                     
                     st.markdown("---")
-                    st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture para WhatsApp)")
+                    st.subheader("🧾 Factura Digital Consolidada (Tómale capture o envíala por WhatsApp)")
                     
+                    # Botón para enviar factura por WhatsApp si hay número
+                    if telefono_cliente.strip():
+                        # Limpiar número para link de whatsapp (quitar espacios, guiones, etc.)
+                        tel_limpio = ''.join(filter(str.isdigit, telefono_cliente.strip()))
+                        if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
+                            tel_limpio = "58" + tel_limpio
+                        
+                        msg_wa = f"🔥 *LUIS STORE* 🔥\nHola *{cliente}*, te enviamos el detalle de tu factura N° #{venta_reg['id_venta']}:\n\n"
+                        for itm in venta_reg["items_carrito"]:
+                            sub_b = itm['precio_bcv'] * itm['cantidad']
+                            msg_wa += f"• {itm['cantidad']}x {itm['nombre']} (Talla {itm['talla']}) - ${sub_b:.2f} BCV\n"
+                        msg_wa += f"\n*TOTAL:* ${total_bcv_carrito:.2f} a BCV\n*Condición:* {estado}\n\n¡Gracias por tu compra en Luis Store! 🚀"
+                        
+                        url_whatsapp = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_wa)}"
+                        st.markdown(f'<a href="{url_whatsapp}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px; margin-bottom:15px;">💬 Enviar Factura por WhatsApp al {telefono_cliente}</button></a>', unsafe_allow_html=True)
+
                     filas_tabla_factura = ""
                     for itm in venta_reg["items_carrito"]:
                         sub_bcv_f = itm['precio_bcv'] * itm['cantidad']
@@ -527,7 +546,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
                 st.rerun()
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS) — RESTA 100% EXACTA EN BCV
+# 6. CUENTAS POR COBRAR (CUOTAS)
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -548,6 +567,8 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
             with col1:
                 st.write(f"**ID Venta:** #{v['id_venta']}")
                 st.write(f"**Cliente:** {v['cliente']}")
+                if v.get('telefono'):
+                    st.write(f"📱 **Tlf:** {v['telefono']}")
                 st.write(f"**Entrega:** {v.get('fecha_entrega', 'N/A')}")
             with col2:
                 total_bcv_ref = v.get('total_venta_bcv', 0)
@@ -557,7 +578,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 cuotas_detalle = v.get('detalle_cuotas', [])
                 tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
                 
-                # CÁLCULO DE RESTA EXACTO EN BCV: Se suman los montos reales pagados en BCV de cada cuota
                 total_pagado_bcv = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_detalle)
                 resta_bcv = total_bcv_ref - total_pagado_bcv
                 
@@ -596,11 +616,9 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                 if abono_usdt <= 0 and abono_bcv <= 0:
                                     st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
-                                    # Guardar el pago exacto en BCV y USDT en la cuota
                                     c['monto_pagado'] = c.get('monto_pagado', 0.0) + abono_usdt
                                     c['monto_pagado_bcv'] = c.get('monto_pagado_bcv', 0.0) + abono_bcv
                                     
-                                    # Si lo pagado en BCV cubre o supera el estimado de esta cuota, marcarla como pagada
                                     estimado_bcv_cuota = c['monto_estimado'] * tasa_bcv_ref
                                     if c['monto_pagado_bcv'] >= estimado_bcv_cuota - 0.01:
                                         c['pagada'] = True
@@ -619,6 +637,15 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         st.success(f"✅ ¡Venta #{v['id_venta']} saldada por completo!")
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
+
+                                    # Botón para enviar comprobante de abono por WhatsApp si tiene número
+                                    if v.get('telefono'):
+                                        tel_limpio = ''.join(filter(str.isdigit, v['telefono']))
+                                        if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
+                                            tel_limpio = "58" + tel_limpio
+                                        msg_abono = f"🔥 *LUIS STORE* 🔥\nHola *{v['cliente']}*, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}):\n\n• *Abonado:* ${monto_factura_bcv:.2f} BCV\n• *Restante:* ${resta_factura_bcv:.2f} BCV\n\n¡Gracias por tu pago! 🚀"
+                                        url_wa_abono = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_abono)}"
+                                        st.markdown(f'<a href="{url_wa_abono}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:10px;">💬 Enviar Comprobante por WhatsApp</button></a>', unsafe_allow_html=True)
 
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
@@ -683,7 +710,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         st.info("No hay ventas registradas todavía.")
     else:
         df_ventas = pd.DataFrame(ventas)
-        st.dataframe(df_ventas[['id_venta', 'cliente', 'producto', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
+        st.dataframe(df_ventas[['id_venta', 'cliente', 'telefono', 'producto', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
         
         st.markdown("---")
         st.subheader("🧾 Generar Factura Digital Profesional para WhatsApp")
@@ -701,6 +728,15 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 
                 total_pagado_bcv_val = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_d)
                 resta_bcv_val = total_bcv_val - total_pagado_bcv_val
+
+                # Botón de WhatsApp en Historial si tiene número
+                if v_encontrada.get('telefono'):
+                    tel_h = ''.join(filter(str.isdigit, v_encontrada['telefono']))
+                    if not tel_h.startswith("58") and len(tel_h) == 10:
+                        tel_h = "58" + tel_h
+                    msg_h = f"🔥 *LUIS STORE* 🔥\nHola *{v_encontrada['cliente']}*, aquí tienes el detalle de tu factura N° #{v_encontrada['id_venta']}:\n• *Total:* ${total_bcv_val:.2f} BCV\n• *Estado:* {v_encontrada['estado']}\n¡Gracias por tu preferencia! 🚀"
+                    url_wa_h = f"https://wa.me/{tel_h}?text={urllib.parse.quote(msg_h)}"
+                    st.markdown(f'<a href="{url_wa_h}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:15px;">💬 Enviar esta Factura por WhatsApp</button></a>', unsafe_allow_html=True)
 
                 texto_resta_html = ""
                 if v_encontrada['estado'] == "CUOTAS (Pendiente)":
