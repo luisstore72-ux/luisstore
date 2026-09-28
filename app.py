@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 
+# Archivos de datos independientes para inventario, ventas y finanzas
 ARCHIVO_INVENTARIO = "inventario_tallas.json"
 ARCHIVO_VENTAS = "ventas_tallas.json"
 ARCHIVO_BINANCE = "binance_fondos.json"
@@ -40,8 +41,10 @@ def guardar_binance(datos):
     with open(ARCHIVO_BINANCE, "w", encoding="utf-8") as f:
         json.dump(datos, f, indent=4, ensure_ascii=False)
 
+# Configuración de la página web
 st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide")
 
+# Estilos CSS con diseño de factura elegante
 st.markdown("""
     <style>
         .invoice-card {
@@ -85,6 +88,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Cargar datos actuales
 inventario = cargar_datos(ARCHIVO_INVENTARIO)
 ventas = cargar_datos(ARCHIVO_VENTAS)
 binance_data = cargar_binance()
@@ -392,7 +396,7 @@ elif menu == "✏️ Editar / Eliminar / Fotos (Inventario)":
             st.rerun()
 
 # ---------------------------------------------------------
-# 5. FONDOS DISPONIBLES EN BINANCE
+# 5. FONDOS DISPONIBLES EN BINANCE (CON BOTONES DE LIMPIEZA)
 # ---------------------------------------------------------
 elif menu == "🟡 Fondos Disponibles en Binance":
     st.subheader("🟡 Control de Fondos en Binance (USDT)")
@@ -418,11 +422,36 @@ elif menu == "🟡 Fondos Disponibles en Binance":
                 st.success("✅ ¡Registrado!")
                 st.rerun()
 
-    if binance_data.get("movimientos"):
-        st.dataframe(pd.DataFrame(binance_data["movimientos"]))
+    st.markdown("---")
+    st.subheader("📜 Historial de Movimientos en Binance")
+    movs = binance_data.get("movimientos", [])
+    if not movs:
+        st.info("No hay movimientos registrados en Binance todavía.")
+    else:
+        df_movs = pd.DataFrame(movs)
+        st.dataframe(df_movs)
+
+        st.markdown("### 🗑️ Limpiar o Eliminar Transacciones de Binance")
+        col_del1, col_del2 = st.columns(2)
+        
+        with col_del1:
+            if st.button("🗑️ Eliminar el último movimiento"):
+                if binance_data["movimientos"]:
+                    ultimo = binance_data["movimientos"].pop()
+                    binance_data["saldo_actual"] -= ultimo["monto"]
+                    guardar_binance(binance_data)
+                    st.success("✅ ¡Último movimiento eliminado y saldo ajustado!")
+                    st.rerun()
+                    
+        with col_del2:
+            if st.button("⚠️ Resetear / Limpiar todo el historial de Binance", type="primary"):
+                binance_data = {"saldo_actual": 0.0, "movimientos": []}
+                guardar_binance(binance_data)
+                st.success("✅ ¡Historial de Binance limpiado y saldo puesto en 0.00 USDT!")
+                st.rerun()
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS) - CÁLCULO EXACTO EN DÓLAR BCV
+# 6. CUENTAS POR COBRAR (CUOTAS)
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -526,7 +555,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                     st.rerun()
 
 # ---------------------------------------------------------
-# 7. HISTORIAL, FACTURACIÓN & FINANZAS
+# 7. HISTORIAL, FACTURACIÓN & FINANZAS (CON BOTÓN DE BORRAR VENTA)
 # ---------------------------------------------------------
 elif menu == "📊 Historial, Facturación & Finanzas":
     st.subheader("📊 Historial General & Finanzas")
@@ -545,3 +574,15 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
         col2.metric("Venta Total (dólar BCV)", f"${total_acum_bcv:.2f}")
         col3.metric("Ganancias Totales", f"${total_ganancias:.2f}")
+
+        st.markdown("---")
+        st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
+        opciones_borrar = [f"ID Venta #{v['id_venta']} — Cliente: {v['cliente']} — Prenda: {v['producto']} (${v['total_venta_bcv']} dólar BCV)" for v in ventas]
+        sel_borrar = st.selectbox("Selecciona la venta que deseas eliminar del historial:", opciones_borrar)
+        
+        if st.button("Eliminar Venta Seleccionada", type="primary"):
+            id_a_borrar = int(sel_borrar.split("—")[0].replace("ID Venta #", "").strip())
+            ventas = [v for v in ventas if v['id_venta'] != id_a_borrar]
+            guardar_datos(ARCHIVO_VENTAS, ventas)
+            st.success(f"✅ ¡La venta #{id_a_borrar} ha sido eliminada del historial correctamente!")
+            st.rerun()
