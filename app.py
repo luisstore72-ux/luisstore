@@ -574,19 +574,21 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                         st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
-                            key_abono_usdt = f"inp_abono_usdt_{v['id_venta']}_{nro_c}"
-                            key_abono_bcv = f"inp_abono_bcv_{v['id_venta']}_{nro_c}"
-                            key_fact_bcv = f"inp_fact_bcv_{v['id_venta']}_{nro_c}"
-                            key_fact_resta = f"inp_fact_resta_{v['id_venta']}_{nro_c}"
-                            key_btn_conf = f"btn_conf_{v['id_venta']}_{nro_c}"
+                            key_abono_usdt = f"abono_usdt_v{v['id_venta']}_c{nro_c}"
+                            key_abono_bcv = f"abono_bcv_v{v['id_venta']}_c{nro_c}"
+                            key_fact_bcv = f"fact_bcv_v{v['id_venta']}_c{nro_c}"
+                            key_fact_resta = f"fact_resta_v{v['id_venta']}_c{nro_c}"
+                            key_btn_conf = f"btn_conf_v{v['id_venta']}_c{nro_c}"
 
-                            abono_usdt = st.number_input(f"Monto abonado (equivalente interno USDT):", min_value=0.0, value=float(resta_usdt), step=0.5, key=key_abono_usdt)
-                            abono_bcv = st.number_input(f"Monto abonado en $ a BCV (cálculo interno):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_abono_bcv)
+                            deuda_esta_cuota = c['monto_estimado'] - monto_pag
+                            
+                            abono_usdt = st.number_input(f"Monto abonado (USDT):", min_value=0.0, value=float(deuda_esta_cuota), step=0.5, key=key_abono_usdt)
+                            abono_bcv = st.number_input(f"Monto abonado ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_abono_bcv)
                             
                             st.markdown("---")
                             st.markdown("✏️ **Personalizar Comprobante para el Cliente:**")
-                            monto_factura_bcv = st.number_input("Monto abonado a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_fact_bcv)
-                            resta_factura_bcv = st.number_input("Monto restante a mostrar en la factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=key_fact_resta)
+                            monto_factura_bcv = st.number_input("Monto a mostrar en factura ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_fact_bcv)
+                            resta_factura_bcv = st.number_input("Resta a mostrar en factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=key_fact_resta)
                             
                             if st.button(f"Aplicar Abono Cuota #{nro_c}", key=key_btn_conf):
                                 if abono_usdt <= 0 or abono_bcv <= 0:
@@ -653,7 +655,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
 
             with col3:
-                if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{v['id_venta']}"):
+                if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_v{v['id_venta']}"):
                     cuotas_detalle = v.get('detalle_cuotas', [])
                     total_deuda_restante = sum(c.get('monto_estimado', 0) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
                     
