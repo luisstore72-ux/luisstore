@@ -554,7 +554,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
                 
-                # CÁLCULO DE RESTA EXACTO Y DIRECTO EN BCV
+                # CÁLCULO DE RESTA EXACTO: Se resta directo lo que se abona en BCV del total de la venta
                 tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
                 total_pagado_bcv = sum(c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_bcv_ref) for c in cuotas_detalle)
                 resta_bcv = total_bcv_ref - total_pagado_bcv
@@ -594,22 +594,13 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                 if abono_usdt <= 0 or abono_bcv <= 0:
                                     st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
-                                    dinero_restante = abono_usdt
+                                    # Registrar el abono exacto en la cuota y guardar su equivalente en BCV
+                                    c['monto_pagado'] = monto_pag + abono_usdt
+                                    c['monto_pagado_bcv'] = c.get('monto_pagado_bcv', 0.0) + abono_bcv
                                     
-                                    for idx_cuota in range(nro_c - 1, len(cuotas_detalle)):
-                                        cuota_actual = cuotas_detalle[idx_cuota]
-                                        if dinero_restante <= 0:
-                                            break
-                                        
-                                        deuda_cuota = cuota_actual['monto_estimado'] - cuota_actual.get('monto_pagado', 0.0)
-                                        
-                                        if dinero_restante >= deuda_cuota:
-                                            cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + deuda_cuota
-                                            cuota_actual['pagada'] = True
-                                            dinero_restante -= deuda_cuota
-                                        else:
-                                            cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + dinero_restante
-                                            dinero_restante = 0.0
+                                    # Si lo abonado cubre o supera el estimado de esta cuota, marcarla como pagada
+                                    if c['monto_pagado'] >= c['monto_estimado'] - 0.01:
+                                        c['pagada'] = True
                                     
                                     binance_data["saldo_actual"] += abono_usdt
                                     binance_data["movimientos"].append({
@@ -653,7 +644,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     st.markdown(factura_abono, unsafe_allow_html=True)
                                     
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
-                                    st.rerun()
 
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
@@ -766,7 +756,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
         opciones_borrar = [f"ID Venta #{v['id_venta']} — Cliente: {v['cliente']} — Prenda: {v['producto']} (${v['total_venta_usdt']} USDT)" for v in ventas]
-        sel_borrar = st.selectbox("Seleccina la venta que deseas eliminar del historial:", opciones_borrar)
+        sel_borrar = st.selectbox("Selecciona la venta que deseas eliminar del historial:", opciones_borrar)
         
         if st.button("Eliminar Venta Seleccionada", type="primary"):
             id_a_borrar = int(sel_borrar.split("—")[0].replace("ID Venta #", "").strip())
