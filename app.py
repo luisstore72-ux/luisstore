@@ -302,11 +302,10 @@ if menu == "🛒 Registrar Venta":
                     st.success("✅ ¡Venta multiproducto registrada exitosamente!")
                     
                     st.markdown("---")
-                    st.subheader("🧾 Factura Digital Consolidada (Tómale capture o envíala por WhatsApp)")
+                    st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture o envíala por WhatsApp)")
                     
-                    # Botón para enviar factura por WhatsApp si hay número
+                    # Botón para enviar factura por WhatsApp si hay número (CORREGIDO SIN ARROBA)
                     if telefono_cliente.strip():
-                        # Limpiar número para link de whatsapp (quitar espacios, guiones, etc.)
                         tel_limpio = ''.join(filter(str.isdigit, telefono_cliente.strip()))
                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
                             tel_limpio = "58" + tel_limpio
@@ -638,7 +637,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Botón para enviar comprobante de abono por WhatsApp si tiene número
+                                    # Botón para enviar comprobante de abono por WhatsApp si tiene número (CORREGIDO SIN ARROBA)
                                     if v.get('telefono'):
                                         tel_limpio = ''.join(filter(str.isdigit, v['telefono']))
                                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
@@ -729,7 +728,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 total_pagado_bcv_val = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_d)
                 resta_bcv_val = total_bcv_val - total_pagado_bcv_val
 
-                # Botón de WhatsApp en Historial si tiene número
+                # Botón de WhatsApp en Historial si tiene número (CORREGIDO SIN ARROBA)
                 if v_encontrada.get('telefono'):
                     tel_h = ''.join(filter(str.isdigit, v_encontrada['telefono']))
                     if not tel_h.startswith("58") and len(tel_h) == 10:
