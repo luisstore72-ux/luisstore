@@ -304,7 +304,6 @@ if menu == "🛒 Registrar Venta":
                     st.markdown("---")
                     st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture o envíala por WhatsApp)")
                     
-                    # Botón para enviar factura por WhatsApp si hay número (CORREGIDO SIN ARROBA)
                     if telefono_cliente.strip():
                         tel_limpio = ''.join(filter(str.isdigit, telefono_cliente.strip()))
                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
@@ -565,7 +564,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.write(f"**ID Venta:** #{v['id_venta']}")
-                st.write(f"**Cliente:** {v['cliente']}")
+                st.write(f"**Cliente:** {v.get('cliente', 'Cliente')}")
                 if v.get('telefono'):
                     st.write(f"📱 **Tlf:** {v['telefono']}")
                 st.write(f"**Entrega:** {v.get('fecha_entrega', 'N/A')}")
@@ -627,7 +626,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         "fecha": str(date.today()),
                                         "tipo": "Entrada USDT (Abono Cuotas)",
                                         "monto": abono_usdt,
-                                        "descripcion": f"Abono Cuota #{nro_c} - Cliente: {v['cliente']} (Venta #{v['id_venta']})"
+                                        "descripcion": f"Abono Cuota #{nro_c} - Cliente: {v.get('cliente', 'Cliente')} (Venta #{v['id_venta']})"
                                     })
                                     guardar_binance(binance_data)
                                     
@@ -637,12 +636,11 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Botón para enviar comprobante de abono por WhatsApp si tiene número (CORREGIDO SIN ARROBA)
                                     if v.get('telefono'):
                                         tel_limpio = ''.join(filter(str.isdigit, v['telefono']))
                                         if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
                                             tel_limpio = "58" + tel_limpio
-                                        msg_abono = f"🔥 *LUIS STORE* 🔥\nHola *{v['cliente']}*, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}):\n\n• *Abonado:* ${monto_factura_bcv:.2f} BCV\n• *Restante:* ${resta_factura_bcv:.2f} BCV\n\n¡Gracias por tu pago! 🚀"
+                                        msg_abono = f"🔥 *LUIS STORE* 🔥\nHola *{v.get('cliente', 'Cliente')}*, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}):\n\n• *Abonado:* ${monto_factura_bcv:.2f} BCV\n• *Restante:* ${resta_factura_bcv:.2f} BCV\n\n¡Gracias por tu pago! 🚀"
                                         url_wa_abono = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_abono)}"
                                         st.markdown(f'<a href="{url_wa_abono}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:10px;">💬 Enviar Comprobante por WhatsApp</button></a>', unsafe_allow_html=True)
 
@@ -659,7 +657,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         f'<p style="margin:0; font-size:12px; color:#555555;">Ref: #{v["id_venta"]}<br>Fecha: {date.today()}</p>'
                                         '</div>'
                                         '</div>'
-                                        f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v["cliente"]}<br><b>Productos:</b> {v["producto"]}</p>'
+                                        f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v.get("cliente", "Cliente")}<br><b>Productos:</b> {v["producto"]}</p>'
                                         '<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e0e0e0; margin-bottom:15px;">'
                                         f'<p style="margin:0; font-size:14px; color:#2e7d32; font-weight:bold;">MONTO ABONADO: ${monto_factura_bcv:.2f} a BCV</p>'
                                         f'<p style="margin:8px 0 0 0; font-size:14px; color:#c62828; font-weight:bold;">RESTA POR PAGAR: ${resta_factura_bcv:.2f} a BCV</p>'
@@ -691,7 +689,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                             "fecha": str(date.today()),
                             "tipo": "Entrada USDT (Pago Total Cuotas)",
                             "monto": total_deuda_restante_usdt,
-                            "descripcion": f"Saldado completo Venta #{v['id_venta']} - Cliente: {v['cliente']}"
+                            "descripcion": f"Saldado completo Venta #{v['id_venta']} - Cliente: {v.get('cliente', 'Cliente')}"
                         })
                         guardar_binance(binance_data)
 
@@ -708,12 +706,17 @@ elif menu == "📊 Historial, Facturación & Finanzas":
     if not ventas:
         st.info("No hay ventas registradas todavía.")
     else:
+        # Asegurar que todas las ventas tengan la clave 'telefono' para que la tabla no falle
+        for v in ventas:
+            if 'telefono' not in v:
+                v['telefono'] = ""
+                
         df_ventas = pd.DataFrame(ventas)
         st.dataframe(df_ventas[['id_venta', 'cliente', 'telefono', 'producto', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
         
         st.markdown("---")
         st.subheader("🧾 Generar Factura Digital Profesional para WhatsApp")
-        opciones_factura = [f"Venta #{v['id_venta']} — Cliente: {v['cliente']} — {v['producto']}" for v in ventas]
+        opciones_factura = [f"Venta #{v['id_venta']} — Cliente: {v.get('cliente', 'Cliente')} — {v['producto']}" for v in ventas]
         sel_factura = st.selectbox("Selecciona la venta para ver su factura:", opciones_factura)
         
         if sel_factura:
@@ -728,12 +731,11 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 total_pagado_bcv_val = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_d)
                 resta_bcv_val = total_bcv_val - total_pagado_bcv_val
 
-                # Botón de WhatsApp en Historial si tiene número (CORREGIDO SIN ARROBA)
                 if v_encontrada.get('telefono'):
                     tel_h = ''.join(filter(str.isdigit, v_encontrada['telefono']))
                     if not tel_h.startswith("58") and len(tel_h) == 10:
                         tel_h = "58" + tel_h
-                    msg_h = f"🔥 *LUIS STORE* 🔥\nHola *{v_encontrada['cliente']}*, aquí tienes el detalle de tu factura N° #{v_encontrada['id_venta']}:\n• *Total:* ${total_bcv_val:.2f} BCV\n• *Estado:* {v_encontrada['estado']}\n¡Gracias por tu preferencia! 🚀"
+                    msg_h = f"🔥 *LUIS STORE* 🔥\nHola *{v_encontrada.get('cliente', 'Cliente')}*, aquí tienes el detalle de tu factura N° #{v_encontrada['id_venta']}:\n• *Total:* ${total_bcv_val:.2f} BCV\n• *Estado:* {v_encontrada['estado']}\n¡Gracias por tu preferencia! 🚀"
                     url_wa_h = f"https://wa.me/{tel_h}?text={urllib.parse.quote(msg_h)}"
                     st.markdown(f'<a href="{url_wa_h}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:15px;">💬 Enviar esta Factura por WhatsApp</button></a>', unsafe_allow_html=True)
 
@@ -761,7 +763,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                     f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{v_encontrada["id_venta"]}<br>Fecha: {v_encontrada["fecha_entrega"]}</p>'
                     '</div>'
                     '</div>'
-                    f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v_encontrada["cliente"]}</p>'
+                    f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v_encontrada.get("cliente", "Cliente")}</p>'
                     '<table class="invoice-table">'
                     '<tr><th>Cant</th><th>Descripción</th><th>Total</th></tr>'
                     f'{filas_hist}'
@@ -794,7 +796,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
-        opciones_borrar = [f"ID Venta #{v['id_venta']} — Cliente: {v['cliente']} — Prenda: {v['producto']} (${v['total_venta_usdt']} USDT)" for v in ventas]
+        opciones_borrar = [f"ID Venta #{v['id_venta']} — Cliente: {v.get('cliente', 'Cliente')} — Prenda: {v['producto']} (${v['total_venta_usdt']} USDT)" for v in ventas]
         sel_borrar = st.selectbox("Selecciona la venta que deseas eliminar del historial:", opciones_borrar)
         
         if st.button("Eliminar Venta Seleccionada", type="primary"):
