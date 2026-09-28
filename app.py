@@ -430,12 +430,12 @@ elif menu == "🟡 Fondos Disponibles en Binance":
         st.dataframe(pd.DataFrame(binance_data["movimientos"]))
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS) - CÁLCULO DIRECTO EN DÓLAR BCV
+# 6. CUENTAS POR COBRAR (CUOTAS)
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
     
-    cuotas_pendientes = [v for v in ventas if v.get("estado"] == "CUOTAS (Pendiente)"]
+    cuotas_pendientes = [v for v in ventas if v.get("estado") == "CUOTAS (Pendiente)"]
     
     if not cuotas_pendientes:
         st.success("🎉 ¡Excelente! No hay cuentas pendientes por cobrar.")
@@ -454,7 +454,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
                 
-                # Resta exacta en dólares BCV
                 resta_bcv = sum(c.get('monto_estimado_bcv', c.get('monto_estimado', 0)) - c.get('monto_pagado_bcv', c.get('monto_pagado', 0)) for c in cuotas_detalle if not c.get('pagada', False))
                 
                 st.markdown(f"🔴 **Resta por cobrar:** **${resta_bcv:.2f} dólar BCV**")
