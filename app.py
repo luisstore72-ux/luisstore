@@ -93,6 +93,10 @@ inventario = cargar_datos(ARCHIVO_INVENTARIO)
 ventas = cargar_datos(ARCHIVO_VENTAS)
 binance_data = cargar_binance()
 
+# Inicializar el carrito temporal de ventas múltiples en la sesión de Streamlit
+if 'carrito_ventas' not in st.session_state:
+    st.session_state.carrito_ventas = []
+
 # Barra lateral con el Logo y Navegación
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
@@ -115,162 +119,229 @@ st.title("🔥 LUIS STORE — Control de Inventario & Ventas")
 st.markdown("Administra tus prendas, tallas, stock, precios a $ a BCV, Binance y genera facturas digitales profesionales.")
 
 # ---------------------------------------------------------
-# 1. REGISTRAR VENTA
+# 1. REGISTRAR VENTA (MULTIPRODUCTO / CARRITO)
 # ---------------------------------------------------------
 if menu == "🛒 Registrar Venta":
-    st.subheader("🛒 Registrar una Venta o Salida")
+    st.subheader("🛒 Registrar Venta Multiproducto (Carrito)")
     
     if not inventario:
         st.warning("⚠️ No hay productos en el inventario para vender. Ve primero a 'Agregar Nuevo Producto / Talla'.")
     else:
+        # Selección del producto a agregar al carrito
         opciones_prod = [f"ID {i}: {p['nombre']} - Talla: {p['talla']} (Stock: {p['stock']} | USDT: ${p['precio_usdt']} | $ BCV: ${p.get('precio_bcv', 0)})" for i, p in enumerate(inventario)]
-        seleccion = st.selectbox("Selecciona el producto y talla:", opciones_prod)
+        seleccion = st.selectbox("Selecciona un producto para agregar al carrito:", opciones_prod)
         idx = int(seleccion.split(":")[0].replace("ID", "").strip())
         
-        producto = inventario[idx]
+        producto_elegido = inventario[idx]
         
-        if producto.get('foto') and os.path.exists(producto['foto']):
-            st.image(producto['foto'], width=150, caption=f"{producto['nombre']} - Talla {producto['talla']}")
+        if producto_elegido.get('foto') and os.path.exists(producto_elegido['foto']):
+            st.image(producto_elegido['foto'], width=130, caption=f"{producto_elegido['nombre']} - Talla {producto_elegido['talla']}")
         
-        cantidad = st.number_input("Cantidad a vender:", min_value=1, max_value=max(1, producto['stock']), step=1)
+        cantidad_a_vender = st.number_input("Cantidad:", min_value=1, max_value=max(1, producto_elegido['stock']), step=1, key="input_cant_carrito")
         
-        tipo_pago = st.radio("Condición de pago:", ["Contado (Pagado de una vez)", "Venta por Cuotas (Pendiente)"])
-        
-        cliente = "Contado"
-        fecha_entrega = str(date.today())
-        cuotas = 1
-        detalle_cuotas = []
-        
-        precio_final_usdt = producto['precio_usdt']
-        precio_final_bcv = producto.get('precio_bcv', 0)
-        
-        if "Cuotas" in tipo_pago:
-            cliente = st.text_input("Nombre del Cliente:", value="")
-            if not cliente.strip():
-                cliente = "Cliente General"
-            
-            st.markdown("### 💰 Precios Especiales para Venta por Cuotas")
-            col_p1, col_p2 = st.columns(2)
-            with col_p1:
-                precio_final_usdt = st.number_input("Precio interno USDT:", min_value=0.0, value=float(producto['precio_usdt']), step=0.5)
-            with col_p2:
-                precio_final_bcv = st.number_input("Precio oficial $ a BCV:", min_value=0.0, value=float(producto.get('precio_bcv', 0)), step=0.5)
-            
-            st.markdown("### 📅 Fechas y Cuotas")
-            fecha_entrega_obj = st.date_input("Fecha de Entrega del Producto:", value=date.today())
-            fecha_entrega = str(fecha_entrega_obj)
-                
-            cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
-            
-            total_v_usdt_calc = precio_final_usdt * cantidad
-            monto_por_cuota = total_v_usdt_calc / cuotas
-
-            st.markdown("📝 **Indica la fecha límite para cada cuota:**")
-            for c in range(1, cuotas + 1):
-                f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
-                detalle_cuotas.append({
-                    "nro": c,
-                    "monto_estimado": monto_por_cuota,
-                    "monto_pagado": 0.0,
-                    "fecha": str(f_cuota),
-                    "pagada": False
-                })
-
-        if st.button("Confirmar y Registrar Venta"):
-            if producto['stock'] < cantidad:
-                st.error("❌ Stock insuficiente para completar la venta.")
+        if st.button("➕ Agregar al Carrito de Venta"):
+            if producto_elegido['stock'] < cantidad_a_vender:
+                st.error("❌ Stock insuficiente para agregar esa cantidad.")
             else:
-                producto['stock'] -= cantidad
+                # Ver si ya está en el carrito para sumar la cantidad
+                en_carrito = False
+                for item in st.session_state.carrito_ventas:
+                    if item['id_inventario'] == idx:
+                        if (item['cantidad'] + cantidad_a_vender) > producto_elegido['stock']:
+                            st.error("❌ La cantidad total en el carrito supera el stock disponible.")
+                        else:
+                            item['cantidad'] += cantidad_a_vender
+                            st.success(f"✅ Se actualizó la cantidad de {producto_elegido['nombre']} en el carrito.")
+                        en_carrito = True
+                        break
                 
-                inversion_unitaria = producto['costo_usdt'] + producto['envio_usdt']
-                inversion_total = inversion_unitaria * cantidad
-                
-                total_venta_usdt = precio_final_usdt * cantidad
-                total_venta_bcv = precio_final_bcv * cantidad
-                
-                ganancia_usdt = total_venta_usdt - inversion_total
-                reinversion_usdt = inversion_total
-                
-                estado = "CUOTAS (Pendiente)" if "Cuotas" in tipo_pago else "PAGADO"
-                
-                if not detalle_cuotas:
-                    detalle_cuotas = [{
-                        "nro": 1,
-                        "monto_estimado": total_venta_usdt,
-                        "monto_pagado": total_venta_usdt,
-                        "fecha": fecha_entrega,
-                        "pagada": True
-                    }]
-                    
-                    binance_data["saldo_actual"] += total_venta_usdt
-                    binance_data["movimientos"].append({
-                        "fecha": str(date.today()),
-                        "tipo": "Entrada USDT (Venta Contado)",
-                        "monto": total_venta_usdt,
-                        "descripcion": f"Venta Contado: {producto['nombre']} (Talla {producto['talla']} x{cantidad})"
+                if not en_carrito:
+                    st.session_state.carrito_ventas.append({
+                        "id_inventario": idx,
+                        "nombre": producto_elegido['nombre'],
+                        "talla": producto_elegido['talla'],
+                        "cantidad": cantidad_a_vender,
+                        "costo_usdt": producto_elegido['costo_usdt'],
+                        "envio_usdt": producto_elegido['envio_usdt'],
+                        "precio_usdt": producto_elegido['precio_usdt'],
+                        "precio_bcv": producto_elegido.get('precio_bcv', 0)
                     })
-                    guardar_binance(binance_data)
+                    st.success(f"✅ ¡{producto_elegido['nombre']} agregado al carrito!")
 
-                venta_reg = {
-                    "id_venta": len(ventas) + 1,
-                    "producto": producto['nombre'],
-                    "talla": producto['talla'],
-                    "cantidad": cantidad,
-                    "precio_compra_usdt": producto['costo_usdt'],
-                    "precio_envio_usdt": producto['envio_usdt'],
-                    "precio_usdt_aplicado": precio_final_usdt,
-                    "precio_bcv_aplicado": precio_final_bcv,
-                    "total_venta_usdt": total_venta_usdt,
-                    "total_venta_bcv": total_venta_bcv,
-                    "ganancia_usdt": ganancia_usdt,
-                    "reinversion_usdt": reinversion_usdt,
-                    "estado": estado,
-                    "cliente": cliente,
-                    "fecha_entrega": fecha_entrega,
-                    "cuotas": cuotas,
-                    "detalle_cuotas": detalle_cuotas
-                }
+        st.markdown("---")
+        st.subheader("📋 Productos en el Carrito Actual")
+        
+        if not st.session_state.carrito_ventas:
+            st.info("El carrito de compras está vacío. Agrega productos arriba.")
+        else:
+            # Mostrar tabla resumen del carrito
+            total_usdt_carrito = 0
+            total_bcv_carrito = 0
+            
+            for i, item in enumerate(st.session_state.carrito_ventas):
+                sub_usdt = item['precio_usdt'] * item['cantidad']
+                sub_bcv = item['precio_bcv'] * item['cantidad']
+                total_usdt_carrito += sub_usdt
+                total_bcv_carrito += sub_bcv
                 
-                ventas.append(venta_reg)
-                guardar_datos(ARCHIVO_INVENTARIO, inventario)
-                guardar_datos(ARCHIVO_VENTAS, ventas)
+                col_c1, col_c2, col_c3 = st.columns([3, 2, 1])
+                with col_c1:
+                    st.write(f"**{item['nombre']}** (Talla: {item['talla']}) x{item['cantidad']}")
+                with col_c2:
+                    st.write(f"Subtotal: ${sub_bcv:.2f} a BCV")
+                with col_c3:
+                    if st.button("🗑️", key=f"del_cart_{i}"):
+                        st.session_state.carrito_ventas.pop(i)
+                        st.rerun()
+            
+            st.markdown(f"### 💵 **Monto Total a Pagar: ${total_bcv_carrito:.2f} a BCV**")
+            st.markdown(f"*(Equivalente interno: ${total_usdt_carrito:.2f} USDT)*")
+            
+            st.markdown("---")
+            tipo_pago = st.radio("Condición de pago para toda la compra:", ["Contado (Pagado de una vez)", "Venta por Cuotas (Pendiente)"])
+            
+            cliente = "Contado"
+            fecha_entrega = str(date.today())
+            cuotas = 1
+            detalle_cuotas = []
+            
+            if "Cuotas" in tipo_pago:
+                cliente = st.text_input("Nombre del Cliente:", value="")
+                if not cliente.strip():
+                    cliente = "Cliente General"
                 
-                st.success("✅ ¡Venta registrada exitosamente!")
+                fecha_entrega_obj = st.date_input("Fecha de Entrega del Producto:", value=date.today())
+                fecha_entrega = str(fecha_entrega_obj)
+                    
+                cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
                 
-                # Factura Elegante Estilo Premium (Fondo blanco optimizado)
-                st.markdown("---")
-                st.markdown("### 🧾 Factura Digital (Tómale capture para WhatsApp)")
+                monto_por_cuota_usdt = total_usdt_carrito / cuotas
+
+                st.markdown("📝 **Indica la fecha límite para cada cuota:**")
+                for c in range(1, cuotas + 1):
+                    f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
+                    detalle_cuotas.append({
+                        "nro": c,
+                        "monto_estimado": monto_por_cuota_usdt,
+                        "monto_pagado": 0.0,
+                        "fecha": str(f_cuota),
+                        "pagada": False
+                    })
+
+            if st.button("Confirmar y Registrar Venta Total"):
+                # Validar stock una última vez antes de descontar
+                stock_suficiente = True
+                for item in st.session_state.carrito_ventas:
+                    prod_inv = inventario[item['id_inventario']]
+                    if prod_inv['stock'] < item['cantidad']:
+                        st.error(f"❌ Stock insuficiente para {item['nombre']} (Talla {item['talla']}).")
+                        stock_suficiente = False
+                        break
                 
-                unitario_bcv = precio_final_bcv
-                factura_html = (
-                    '<div class="invoice-card">'
-                    '<div class="invoice-header">'
-                    '<div>'
-                    '<h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>'
-                    '<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>'
-                    '</div>'
-                    '<div style="text-align: right;">'
-                    '<h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>'
-                    f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{venta_reg["id_venta"]}<br>Fecha: {fecha_entrega}</p>'
-                    '</div>'
-                    '</div>'
-                    f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {cliente}</p>'
-                    '<table class="invoice-table">'
-                    '<tr><th>Cant</th><th>Descripción</th><th>Precio Unit.</th><th>Total</th></tr>'
-                    f'<tr><td>{cantidad}</td><td>{producto["nombre"]} (Talla: {producto["talla"]})</td><td>${unitario_bcv:.2f}</td><td><b>${total_venta_bcv:.2f}</b></td></tr>'
-                    '</table>'
-                    '<div style="text-align: right; margin-top:15px;">'
-                    f'<p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {estado}</p>'
-                    f'<h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_venta_bcv:.2f} a BCV</h2>'
-                    '</div>'
-                    '<hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">'
-                    '<div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">'
-                    'Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>'
-                    '<b>¡Gracias por tu compra en Luis Store!</b>'
-                    '</div>'
-                    '</div>'
-                )
-                st.markdown(factura_html, unsafe_allow_html=True)
+                if stock_suficiente:
+                    # Descontar stock de cada producto en el inventario real
+                    inversion_total_lote = 0
+                    ganancia_total_lote = 0
+                    
+                    productos_resumen_factura = []
+                    
+                    for item in st.session_state.carrito_ventas:
+                        prod_inv = inventario[item['id_inventario']]
+                        prod_inv['stock'] -= item['cantidad']
+                        
+                        inv_uni = (prod_inv['costo_usdt'] + prod_inv['envio_usdt']) * item['cantidad']
+                        inversion_total_lote += inv_uni
+                        
+                        sub_v_usdt = item['precio_usdt'] * item['cantidad']
+                        ganancia_total_lote += (sub_v_usdt - inv_uni)
+                        
+                        productos_resumen_factura.append(f"{item['cantidad']}x {item['nombre']} (Talla {item['talla']})")
+
+                    estado = "CUOTAS (Pendiente)" if "Cuotas" in tipo_pago else "PAGADO"
+                    
+                    if not detalle_cuotas:
+                        detalle_cuotas = [{
+                            "nro": 1,
+                            "monto_estimado": total_usdt_carrito,
+                            "monto_pagado": total_usdt_carrito,
+                            "fecha": fecha_entrega,
+                            "pagada": True
+                        }]
+                        
+                        binance_data["saldo_actual"] += total_usdt_carrito
+                        binance_data["movimientos"].append({
+                            "fecha": str(date.today()),
+                            "tipo": "Entrada USDT (Venta Contado Carrito)",
+                            "monto": total_usdt_carrito,
+                            "descripcion": f"Venta Multiproducto Contado: {', '.join(productos_resumen_factura)}"
+                        })
+                        guardar_binance(binance_data)
+
+                    # Registrar como una venta global consolidada
+                    venta_reg = {
+                        "id_venta": len(ventas) + 1,
+                        "producto": " / ".join(productos_resumen_factura),
+                        "talla": "Múltiple",
+                        "cantidad": sum(item['cantidad'] for item in st.session_state.carrito_ventas),
+                        "total_venta_usdt": total_usdt_carrito,
+                        "total_venta_bcv": total_bcv_carrito,
+                        "ganancia_usdt": ganancia_total_lote,
+                        "reinversion_usdt": inversion_total_lote,
+                        "estado": estado,
+                        "cliente": cliente,
+                        "fecha_entrega": fecha_entrega,
+                        "cuotas": cuotas,
+                        "detalle_cuotas": detalle_cuotas,
+                        "items_carrito": st.session_state.carrito_ventas.copy()
+                    }
+                    
+                    ventas.append(venta_reg)
+                    guardar_datos(ARCHIVO_INVENTARIO, inventario)
+                    guardar_datos(ARCHIVO_VENTAS, ventas)
+                    
+                    # Vaciar carrito actual
+                    st.session_state.carrito_ventas = []
+                    
+                    st.success("✅ ¡Venta multiproducto registrada exitosamente!")
+                    
+                    # Factura Elegante Estilo Premium (Fondo blanco optimizado)
+                    st.markdown("---")
+                    st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture para WhatsApp)")
+                    
+                    filas_tabla_factura = ""
+                    for itm in venta_reg["items_carrito"]:
+                        sub_bcv_f = itm['precio_bcv'] * itm['cantidad']
+                        filas_tabla_factura += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td>${itm["precio_bcv"]:.2f}</td><td><b>${sub_bcv_f:.2f}</b></td></tr>'
+
+                    factura_html = (
+                        '<div class="invoice-card">'
+                        '<div class="invoice-header">'
+                        '<div>'
+                        '<h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>'
+                        '<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>'
+                        '</div>'
+                        '<div style="text-align: right;">'
+                        '<h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>'
+                        f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{venta_reg["id_venta"]}<br>Fecha: {fecha_entrega}</p>'
+                        '</div>'
+                        '</div>'
+                        f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {cliente}</p>'
+                        '<table class="invoice-table">'
+                        '<tr><th>Cant</th><th>Descripción</th><th>Precio Unit.</th><th>Total</th></tr>'
+                        f'{filas_tabla_factura}'
+                        '</table>'
+                        '<div style="text-align: right; margin-top:15px;">'
+                        f'<p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {estado}</p>'
+                        f'<h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_carrito:.2f} a BCV</h2>'
+                        '</div>'
+                        '<hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">'
+                        '<div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">'
+                        'Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>'
+                        '<b>¡Gracias por tu compra en Luis Store!</b>'
+                        '</div>'
+                        '</div>'
+                    )
+                    st.markdown(factura_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 2. MÓDULO DE INVENTARIO
@@ -487,7 +558,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 st.write(f"**Entrega:** {v.get('fecha_entrega', 'N/A')}")
             with col2:
                 total_bcv_ref = v.get('total_venta_bcv', 0)
-                st.write(f"**Prenda:** {v['producto']} (Talla: {v['talla']} x{v['cantidad']})")
+                st.write(f"**Prenda(s):** {v['producto']}")
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
@@ -556,7 +627,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     else:
                                         st.success(f"✅ ¡Abono registrado con éxito!")
 
-                                    # Comprobante de Abono Elegante Estilo Premium (Fondo blanco optimizado)
+                                    # Comprobante de Abono Elegante Estilo Premium
                                     st.markdown("---")
                                     st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
                                     factura_abono = (
@@ -570,7 +641,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         f'<p style="margin:0; font-size:12px; color:#555555;">Ref: #{v["id_venta"]}<br>Fecha: {date.today()}</p>'
                                         '</div>'
                                         '</div>'
-                                        f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v["cliente"]}<br><b>Producto:</b> {v["producto"]} ({v["talla"]})</p>'
+                                        f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v["cliente"]}<br><b>Productos:</b> {v["producto"]}</p>'
                                         '<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e0e0e0; margin-bottom:15px;">'
                                         f'<p style="margin:0; font-size:14px; color:#2e7d32; font-weight:bold;">MONTO ABONADO: ${monto_factura_bcv:.2f} a BCV</p>'
                                         f'<p style="margin:8px 0 0 0; font-size:14px; color:#c62828; font-weight:bold;">RESTA POR PAGAR: ${resta_factura_bcv:.2f} a BCV</p>'
@@ -619,11 +690,11 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         st.info("No hay ventas registradas todavía.")
     else:
         df_ventas = pd.DataFrame(ventas)
-        st.dataframe(df_ventas[['id_venta', 'cliente', 'producto', 'talla', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
+        st.dataframe(df_ventas[['id_venta', 'cliente', 'producto', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
         
         st.markdown("---")
         st.subheader("🧾 Generar Factura Digital Profesional para WhatsApp")
-        opciones_factura = [f"Venta #{v['id_venta']} — Cliente: {v['cliente']} — {v['producto']} (Talla {v['talla']})" for v in ventas]
+        opciones_factura = [f"Venta #{v['id_venta']} — Cliente: {v['cliente']} — {v['producto']}" for v in ventas]
         sel_factura = st.selectbox("Selecciona la venta para ver su factura:", opciones_factura)
         
         if sel_factura:
@@ -642,6 +713,15 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 if v_encontrada['estado'] == "CUOTAS (Pendiente)":
                     texto_resta_html = f'<p style="margin:4px 0; font-size:13px; color:#c62828;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>'
 
+                # Generar filas de factura histórica según si tiene items múltiples o individuales
+                filas_hist = ""
+                if "items_carrito" in v_encontrada:
+                    for itm in v_encontrada["items_carrito"]:
+                        sub_bcv_h = itm['precio_bcv'] * itm['cantidad']
+                        filas_hist += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td><b>${sub_bcv_h:.2f}</b></td></tr>'
+                else:
+                    filas_hist += f'<tr><td>{v_encontrada["cantidad"]}</td><td>{v_encontrada["producto"]} (Talla: {v_encontrada["talla"]})</td><td><b>${total_bcv_val:.2f}</b></td></tr>'
+
                 factura_historial = (
                     '<div class="invoice-card">'
                     '<div class="invoice-header">'
@@ -657,7 +737,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                     f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v_encontrada["cliente"]}</p>'
                     '<table class="invoice-table">'
                     '<tr><th>Cant</th><th>Descripción</th><th>Total</th></tr>'
-                    f'<tr><td>{v_encontrada["cantidad"]}</td><td>{v_encontrada["producto"]} (Talla: {v_encontrada["talla"]})</td><td><b>${total_bcv_val:.2f}</b></td></tr>'
+                    f'{filas_hist}'
                     '</table>'
                     '<div style="text-align: right; margin-top:15px;">'
                     f'<p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {v_encontrada["estado"]}</p>'
