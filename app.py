@@ -4,7 +4,6 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 
-# Archivos de datos independientes para inventario, ventas y finanzas
 ARCHIVO_INVENTARIO = "inventario_tallas.json"
 ARCHIVO_VENTAS = "ventas_tallas.json"
 ARCHIVO_BINANCE = "binance_fondos.json"
@@ -41,10 +40,8 @@ def guardar_binance(datos):
     with open(ARCHIVO_BINANCE, "w", encoding="utf-8") as f:
         json.dump(datos, f, indent=4, ensure_ascii=False)
 
-# Configuración de la página web
 st.set_page_config(page_title="LUIS STORE | Control & Ventas", layout="wide")
 
-# Estilos CSS con diseño de factura elegante
 st.markdown("""
     <style>
         .invoice-card {
@@ -88,7 +85,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Cargar datos actuales
 inventario = cargar_datos(ARCHIVO_INVENTARIO)
 ventas = cargar_datos(ARCHIVO_VENTAS)
 binance_data = cargar_binance()
@@ -209,17 +205,15 @@ if menu == "🛒 Registrar Venta":
                     
                 cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
                 
-                monto_por_cuota_bcv = total_bcv_carrito / cuotas
+                monto_por_cuota_bcv = round(total_bcv_carrito / cuotas, 2)
 
-                st.markdown("📝 **Indica la fecha límite y monto exacto en dólares BCV para cada cuota:**")
+                st.markdown("📝 **Fechas y montos de las cuotas:**")
                 for c in range(1, cuotas + 1):
                     f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
                     detalle_cuotas.append({
                         "nro": c,
                         "monto_estimado_bcv": monto_por_cuota_bcv,
                         "monto_pagado_bcv": 0.0,
-                        "monto_estimado": monto_por_cuota_bcv,
-                        "monto_pagado": 0.0,
                         "fecha": str(f_cuota),
                         "pagada": False
                     })
@@ -257,8 +251,6 @@ if menu == "🛒 Registrar Venta":
                             "nro": 1,
                             "monto_estimado_bcv": total_bcv_carrito,
                             "monto_pagado_bcv": total_bcv_carrito,
-                            "monto_estimado": total_bcv_carrito,
-                            "monto_pagado": total_bcv_carrito,
                             "fecha": fecha_entrega,
                             "pagada": True
                         }]
@@ -430,7 +422,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
         st.dataframe(pd.DataFrame(binance_data["movimientos"]))
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS)
+# 6. CUENTAS POR COBRAR (CUOTAS) - CÁLCULO EXACTO EN DÓLAR BCV
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -454,15 +446,15 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
                 
-                resta_bcv = sum(c.get('monto_estimado_bcv', c.get('monto_estimado', 0)) - c.get('monto_pagado_bcv', c.get('monto_pagado', 0)) for c in cuotas_detalle if not c.get('pagada', False))
+                resta_bcv = sum(c.get('monto_estimado_bcv', 0) - c.get('monto_pagado_bcv', 0) for c in cuotas_detalle if not c.get('pagada', False))
                 
                 st.markdown(f"🔴 **Resta por cobrar:** **${resta_bcv:.2f} dólar BCV**")
                 
                 st.markdown("**Desglose de Cuotas y Abonos:**")
                 for c in cuotas_detalle:
                     nro_c = c['nro']
-                    monto_est_bcv = c.get('monto_estimado_bcv', c.get('monto_estimado', 0))
-                    monto_pag_bcv = c.get('monto_pagado_bcv', c.get('monto_pagado', 0))
+                    monto_est_bcv = c.get('monto_estimado_bcv', 0)
+                    monto_pag_bcv = c.get('monto_pagado_bcv', 0)
                     deuda_cuota_bcv = monto_est_bcv - monto_pag_bcv
                     fecha_c = c['fecha']
                     pagada_c = c.get('pagada', False)
@@ -489,18 +481,16 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         if dinero_restante_bcv <= 0:
                                             break
                                         
-                                        est_bcv = cuota_actual.get('monto_estimado_bcv', cuota_actual.get('monto_estimado', 0))
-                                        pag_bcv = cuota_actual.get('monto_pagado_bcv', cuota_actual.get('monto_pagado', 0))
+                                        est_bcv = cuota_actual.get('monto_estimado_bcv', 0)
+                                        pag_bcv = cuota_actual.get('monto_pagado_bcv', 0)
                                         deuda_cuota = est_bcv - pag_bcv
                                         
                                         if dinero_restante_bcv >= deuda_cuota:
                                             cuota_actual['monto_pagado_bcv'] = pag_bcv + deuda_cuota
-                                            cuota_actual['monto_pagado'] = cuota_actual['monto_pagado_bcv']
                                             cuota_actual['pagada'] = True
                                             dinero_restante_bcv -= deuda_cuota
                                         else:
                                             cuota_actual['monto_pagado_bcv'] = pag_bcv + dinero_restante_bcv
-                                            cuota_actual['monto_pagado'] = cuota_actual['monto_pagado_bcv']
                                             dinero_restante_bcv = 0.0
 
                                     tasa_aproximada = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 36.5
@@ -528,8 +518,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
                     cuotas_detalle = v.get('detalle_cuotas', [])
                     for c in cuotas_detalle:
-                        c['monto_pagado_bcv'] = c.get('monto_estimado_bcv', c.get('monto_estimado', 0))
-                        c['monto_pagado'] = c['monto_pagado_bcv']
+                        c['monto_pagado_bcv'] = c.get('monto_estimado_bcv', 0)
                         c['pagada'] = True
                     v['estado'] = "PAGADO"
                     guardar_datos(ARCHIVO_VENTAS, ventas)
