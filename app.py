@@ -766,7 +766,7 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
         opciones_borrar = [f"ID Venta #{v['id_venta']} — Cliente: {v['cliente']} — Prenda: {v['producto']} (${v['total_venta_usdt']} USDT)" for v in ventas]
-        sel_borrar = st.selectbox("Selecciona la venta que deseas eliminar del historial:", opciones_borrar)
+        sel_borrar = st.selectbox("Seleccina la venta que deseas eliminar del historial:", opciones_borrar)
         
         if st.button("Eliminar Venta Seleccionada", type="primary"):
             id_a_borrar = int(sel_borrar.split("—")[0].replace("ID Venta #", "").strip())
