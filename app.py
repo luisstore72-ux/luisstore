@@ -525,7 +525,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
                 st.rerun()
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS)
+# 6. CUENTAS POR COBRAR (CUOTAS) — RESTA EXACTA EN BCV CORREGIDA
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -553,11 +553,11 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
-                total_pagado_usdt = sum(c.get('monto_pagado', 0) for c in cuotas_detalle)
-                resta_usdt = v['total_venta_usdt'] - total_pagado_usdt
                 
+                # CÁLCULO DE RESTA EXACTO Y DIRECTO EN BCV
                 tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
-                resta_bcv = resta_usdt * tasa_bcv_ref
+                total_pagado_bcv = sum(c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_bcv_ref) for c in cuotas_detalle)
+                resta_bcv = total_bcv_ref - total_pagado_bcv
                 
                 st.markdown(f"🔴 **Resta por cobrar:** **${resta_bcv:.2f} a BCV**")
                 
@@ -653,6 +653,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     st.markdown(factura_abono, unsafe_allow_html=True)
                                     
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
+                                    st.rerun()
 
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
@@ -702,10 +703,10 @@ elif menu == "📊 Historial, Facturación & Finanzas":
             if v_encontrada:
                 total_bcv_val = v_encontrada.get('total_venta_bcv', 0)
                 cuotas_d = v_encontrada.get('detalle_cuotas', [])
-                pagado_u = sum(c.get('monto_pagado', 0) for c in cuotas_d)
-                resta_u = v_encontrada['total_venta_usdt'] - pagado_u
                 tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
-                resta_bcv_val = resta_u * tasa_ref
+                
+                total_pagado_bcv_val = sum(c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_ref) for c in cuotas_d)
+                resta_bcv_val = total_bcv_val - total_pagado_bcv_val
 
                 texto_resta_html = ""
                 if v_encontrada['estado'] == "CUOTAS (Pendiente)":
