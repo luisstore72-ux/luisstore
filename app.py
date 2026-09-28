@@ -540,7 +540,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     if not cuotas_pendientes:
         st.success("🎉 ¡Excelente! No hay cuentas pendientes por cobrar (todo está pagado).")
     else:
-        for v in cuotas_pendientes:
+        for idx_v, v in enumerate(cuotas_pendientes):
             st.markdown(f"---")
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -574,11 +574,11 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                         st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
-                            key_abono_usdt = f"abono_usdt_v{v['id_venta']}_c{nro_c}"
-                            key_abono_bcv = f"abono_bcv_v{v['id_venta']}_c{nro_c}"
-                            key_fact_bcv = f"fact_bcv_v{v['id_venta']}_c{nro_c}"
-                            key_fact_resta = f"fact_resta_v{v['id_venta']}_c{nro_c}"
-                            key_btn_conf = f"btn_conf_v{v['id_venta']}_c{nro_c}"
+                            key_abono_usdt = f"abono_usdt_{idx_v}_v{v['id_venta']}_c{nro_c}"
+                            key_abono_bcv = f"abono_bcv_{idx_v}_v{v['id_venta']}_c{nro_c}"
+                            key_fact_bcv = f"fact_bcv_{idx_v}_v{v['id_venta']}_c{nro_c}"
+                            key_fact_resta = f"fact_resta_{idx_v}_v{v['id_venta']}_c{nro_c}"
+                            key_btn_conf = f"btn_conf_{idx_v}_v{v['id_venta']}_c{nro_c}"
 
                             deuda_esta_cuota = c['monto_estimado'] - monto_pag
                             
@@ -655,7 +655,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                     guardar_datos(ARCHIVO_VENTAS, ventas)
 
             with col3:
-                if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_v{v['id_venta']}"):
+                if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
                     cuotas_detalle = v.get('detalle_cuotas', [])
                     total_deuda_restante = sum(c.get('monto_estimado', 0) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
                     
