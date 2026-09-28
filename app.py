@@ -93,9 +93,11 @@ inventario = cargar_datos(ARCHIVO_INVENTARIO)
 ventas = cargar_datos(ARCHIVO_VENTAS)
 binance_data = cargar_binance()
 
+# Inicializar el carrito temporal de ventas múltiples en la sesión de Streamlit
 if 'carrito_ventas' not in st.session_state:
     st.session_state.carrito_ventas = []
 
+# Barra lateral con el Logo y Navegación
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, use_container_width=True)
@@ -210,20 +212,14 @@ if menu == "🛒 Registrar Venta":
                     
                 cuotas = st.selectbox("Número de Cuotas (Máximo 4):", [1, 2, 3, 4])
                 
-                monto_por_cuota_usdt_ref = total_usdt_carrito / cuotas
-                tasa_ref_temp = total_usdt_carrito / total_bcv_carrito if total_bcv_carrito > 0 else 1.0
+                monto_por_cuota_usdt = total_usdt_carrito / cuotas
 
-                st.markdown("📝 **Indica la fecha límite y el monto exacto para cada cuota a tu preferencia:**")
+                st.markdown("📝 **Indica la fecha límite para cada cuota:**")
                 for c in range(1, cuotas + 1):
-                    col_fc, col_mc = st.columns(2)
-                    with col_fc:
-                        f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
-                    with col_mc:
-                        m_cuota_usdt_input = st.number_input(f"Monto cuota #{c} (USDT):", min_value=0.0, value=float(monto_por_cuota_usdt_ref), step=0.5, key=f"cuota_m_{c}")
-
+                    f_cuota = st.date_input(f"Fecha límite cuota #{c}:", value=date.today(), key=f"cuota_f_{c}")
                     detalle_cuotas.append({
                         "nro": c,
-                        "monto_estimado": m_cuota_usdt_input,
+                        "monto_estimado": monto_por_cuota_usdt,
                         "monto_pagado": 0.0,
                         "fecha": str(f_cuota),
                         "pagada": False
@@ -529,7 +525,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
                 st.rerun()
 
 # ---------------------------------------------------------
-# 6. CUENTAS POR COBRAR (CUOTAS)
+# 6. CUENTAS POR COBRAR (CUOTAS) — CON CÁLCULO EXACTO CORREGIDO EN BCV
 # ---------------------------------------------------------
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Venta por Cuotas)")
@@ -557,74 +553,79 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
                 
                 cuotas_detalle = v.get('detalle_cuotas', [])
-                total_pagado_usdt = sum(c.get('monto_pagado', 0) for c in cuotas_detalle)
-                resta_usdt = v['total_venta_usdt'] - total_pagado_usdt
                 
+                # CÁLCULO EXACTO DIRECTO EN BCV: Sumar la deuda pendiente de cada cuota directamente en dólares BCV
                 tasa_bcv_ref = total_bcv_ref / v['total_venta_usdt'] if v['total_venta_usdt'] > 0 else 0
-                resta_bcv = resta_usdt * tasa_bcv_ref
+                
+                total_pagado_bcv = sum(c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_bcv_ref) for c in cuotas_detalle)
+                resta_bcv = total_bcv_ref - total_pagado_bcv
                 
                 st.markdown(f"🔴 **Resta por cobrar:** **${resta_bcv:.2f} a BCV**")
                 
                 st.markdown("**Desglose de Cuotas y Abonos:**")
                 for c in cuotas_detalle:
                     nro_c = c['nro']
-                    monto_pag = c.get('monto_pagado', 0)
                     fecha_c = c['fecha']
                     pagada_c = c.get('pagada', False)
                     
-                    monto_est_usdt = c.get('monto_estimado', c.get('monto_estimado_bcv', 0))
+                    monto_est_usdt = c.get('monto_estimado', 0)
                     monto_est_bcv = monto_est_usdt * tasa_bcv_ref
+                    
+                    monto_pag_bcv = c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_bcv_ref)
+                    deuda_cuota_bcv = monto_est_bcv - monto_pag_bcv
 
                     if pagada_c:
                         st.markdown(f"✅ ~~Cuota {nro_c} (Vence: {fecha_c}) | Pagada~~ **[PAGADA]**")
                     else:
-                        st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c}")
+                        st.markdown(f"⏳ **Cuota {nro_c}:** Vence el {fecha_c} (Resta: ${deuda_cuota_bcv:.2f} a BCV)")
                         
                         with st.expander(f"Registrar abono / pago Cuota #{nro_c}"):
-                            key_abono_usdt = f"abono_usdt_{idx_v}_v{v['id_venta']}_c{nro_c}"
                             key_abono_bcv = f"abono_bcv_{idx_v}_v{v['id_venta']}_c{nro_c}"
                             key_fact_bcv = f"fact_bcv_{idx_v}_v{v['id_venta']}_c{nro_c}"
                             key_fact_resta = f"fact_resta_{idx_v}_v{v['id_venta']}_c{nro_c}"
                             key_btn_conf = f"btn_conf_{idx_v}_v{v['id_venta']}_c{nro_c}"
 
-                            deuda_esta_cuota = monto_est_usdt - monto_pag
-                            
-                            abono_usdt = st.number_input(f"Monto abonado (USDT):", min_value=0.0, value=float(deuda_esta_cuota), step=0.5, key=key_abono_usdt)
-                            abono_bcv = st.number_input(f"Monto abonado ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_abono_bcv)
+                            abono_bcv = st.number_input(f"Monto abonado ($ a BCV):", min_value=0.0, value=float(deuda_cuota_bcv), step=0.5, key=key_abono_bcv)
                             
                             st.markdown("---")
                             st.markdown("✏️ **Personalizar Comprobante para el Cliente:**")
-                            monto_factura_bcv = st.number_input("Monto a mostrar en factura ($ a BCV):", min_value=0.0, value=float(abono_usdt * tasa_bcv_ref), step=0.5, key=key_fact_bcv)
-                            resta_factura_bcv = st.number_input("Resta a mostrar en factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - (abono_usdt * tasa_bcv_ref)), step=0.5, key=key_fact_resta)
+                            monto_factura_bcv = st.number_input("Monto a mostrar en factura ($ a BCV):", min_value=0.0, value=float(abono_bcv), step=0.5, key=key_fact_bcv)
+                            resta_factura_bcv = st.number_input("Resta a mostrar en factura ($ a BCV):", min_value=0.0, value=float(resta_bcv - abono_bcv), step=0.5, key=key_fact_resta)
                             
                             if st.button(f"Aplicar Abono Cuota #{nro_c}", key=key_btn_conf):
-                                if abono_usdt <= 0 or abono_bcv <= 0:
+                                if abono_bcv <= 0:
                                     st.warning("⚠️ Ingresa un monto de abono válido mayor a 0.")
                                 else:
-                                    dinero_restante = abono_usdt
+                                    dinero_restante_bcv = abono_bcv
                                     
                                     for idx_cuota in range(nro_c - 1, len(cuotas_detalle)):
                                         cuota_actual = cuotas_detalle[idx_cuota]
-                                        if dinero_restante <= 0:
+                                        if dinero_restante_bcv <= 0:
                                             break
                                         
-                                        est_cuota_val = cuota_actual.get('monto_estimado', cuota_actual.get('monto_estimado_bcv', 0))
-                                        deuda_cuota = est_cuota_val - cuota_actual.get('monto_pagado', 0.0)
+                                        est_bcv_val = cuota_actual.get('monto_estimado', 0) * tasa_bcv_ref
+                                        pag_bcv_val = cuota_actual.get('monto_pagado_bcv', cuota_actual.get('monto_pagado', 0) * tasa_bcv_ref)
+                                        deuda_cuota = est_bcv_val - pag_bcv_val
                                         
-                                        if dinero_restante >= deuda_cuota:
-                                            cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + deuda_cuota
+                                        if dinero_restante_bcv >= deuda_cuota:
+                                            cuota_actual['monto_pagado_bcv'] = pag_bcv_val + deuda_cuota
+                                            cuota_actual['monto_pagado'] = cuota_actual['monto_pagado_bcv'] / tasa_bcv_ref if tasa_bcv_ref > 0 else 0
                                             cuota_actual['pagada'] = True
-                                            dinero_restante -= deuda_cuota
+                                            dinero_restante_bcv -= deuda_cuota
                                         else:
-                                            cuota_actual['monto_pagado'] = cuota_actual.get('monto_pagado', 0.0) + dinero_restante
-                                            dinero_restante = 0.0
+                                            cuota_actual['monto_pagado_bcv'] = pag_bcv_val + dinero_restante_bcv
+                                            cuota_actual['monto_pagado'] = cuota_actual['monto_pagado_bcv'] / tasa_bcv_ref if tasa_bcv_ref > 0 else 0
+                                            dinero_restante_bcv = 0.0
                                     
-                                    binance_data["saldo_actual"] += abono_usdt
+                                    # Equivalente en USDT para sumar correctamente a Binance
+                                    abono_usdt_equivalente = abono_bcv / tasa_bcv_ref if tasa_bcv_ref > 0 else abono_bcv
+                                    
+                                    binance_data["saldo_actual"] += abono_usdt_equivalente
                                     binance_data["movimientos"].append({
                                         "fecha": str(date.today()),
                                         "tipo": "Entrada USDT (Abono Cuotas)",
-                                        "monto": abono_usdt,
-                                        "descripcion": f"Abono Cuota #{nro_c} - Cliente: {v['cliente']} (Venta #{v['id_venta']})"
+                                        "monto": abono_usdt_equivalente,
+                                        "descripcion": f"Abono Cuota #{nro_c} (${abono_bcv} a BCV) - Cliente: {v['cliente']} (Venta #{v['id_venta']})"
                                     })
                                     guardar_binance(binance_data)
                                     
@@ -665,19 +666,24 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
             with col3:
                 if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
                     cuotas_detalle = v.get('detalle_cuotas', [])
-                    total_deuda_restante = sum(c.get('monto_estimado', c.get('monto_estimado_bcv', 0)) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
+                    total_deuda_restante_bcv = sum(
+                        (c.get('monto_estimado', 0) * tasa_bcv_ref) - c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_bcv_ref) 
+                        for c in cuotas_detalle if not c.get('pagada', False)
+                    )
                     
                     for c in cuotas_detalle:
-                        c['monto_pagado'] = c.get('monto_estimado', c.get('monto_estimado_bcv', 0))
+                        c['monto_pagado_bcv'] = c.get('monto_estimado', 0) * tasa_bcv_ref
+                        c['monto_pagado'] = c.get('monto_estimado', 0)
                         c['pagada'] = True
                     v['estado'] = "PAGADO"
                     
-                    if total_deuda_restante > 0:
-                        binance_data["saldo_actual"] += total_deuda_restante
+                    if total_deuda_restante_bcv > 0:
+                        deuda_restante_usdt = total_deuda_restante_bcv / tasa_bcv_ref if tasa_bcv_ref > 0 else 0
+                        binance_data["saldo_actual"] += deuda_restante_usdt
                         binance_data["movimientos"].append({
                             "fecha": str(date.today()),
                             "tipo": "Entrada USDT (Pago Total Cuotas)",
-                            "monto": total_deuda_restante,
+                            "monto": deuda_restante_usdt,
                             "descripcion": f"Saldado completo Venta #{v['id_venta']} - Cliente: {v['cliente']}"
                         })
                         guardar_binance(binance_data)
@@ -710,10 +716,10 @@ elif menu == "📊 Historial, Facturación & Finanzas":
             if v_encontrada:
                 total_bcv_val = v_encontrada.get('total_venta_bcv', 0)
                 cuotas_d = v_encontrada.get('detalle_cuotas', [])
-                pagado_u = sum(c.get('monto_pagado', 0) for c in cuotas_d)
-                resta_u = v_encontrada['total_venta_usdt'] - pagado_u
-                tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
-                resta_bcv_val = resta_u * tasa_ref
+                tasa_ref_f = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada['total_venta_usdt'] > 0 else 0
+                
+                pagado_bcv = sum(c.get('monto_pagado_bcv', c.get('monto_pagado', 0) * tasa_ref_f) for c in cuotas_d)
+                resta_bcv_val = total_bcv_val - pagado_bcv
 
                 texto_resta_html = ""
                 if v_encontrada['estado'] == "CUOTAS (Pendiente)":
