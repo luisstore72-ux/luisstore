@@ -123,7 +123,7 @@ binance_data = obtener_binance()
 if 'carrito_ventas' not in st.session_state:
     st.session_state.carrito_ventas = []
 
-# Barra lateral de navegación
+# Barra lateral de navegación con todas las opciones
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, use_container_width=True)
@@ -131,7 +131,7 @@ with st.sidebar:
         st.markdown("## 🔥 LUIS STORE (Cloud)")
     
     st.markdown("---")
-    menu = st.sidebar.selectbox("Menú Principal", [
+    menu = st.selectbox("Menú Principal", [
         "🛒 Registrar Venta", 
         "📦 Módulo de Inventario (Tallas y Stock)", 
         "➕ Agregar Nuevo Producto / Talla", 
@@ -231,7 +231,6 @@ if menu == "🛒 Registrar Venta":
                     })
 
             if st.button("Confirmar y Registrar Venta Cloud"):
-                # Actualizar stock restando en la colección inventario de Firebase
                 for item in st.session_state.carrito_ventas:
                     for p in inventario:
                         if p['id_doc'] == item['id_doc']:
