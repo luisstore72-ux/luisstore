@@ -314,4 +314,58 @@ if menu == "🛒 Registrar Venta":
                             
                             productos_resumen_factura.append(f"{item['cantidad']}x {item['nombre']} (Talla {item['talla']})")
 
-                    estado = "CUOTAS (Pendiente)" if "Cuotas" in tipo_pago else
+                    estado = "CUOTAS (Pendiente)" if "Cuotas" in tipo_pago else "PAGADO"
+                    
+                    if not detalle_cuotas:
+                        detalle_cuotas = [{
+                            "nro": 1,
+                            "monto_estimado": total_usdt_carrito,
+                            "monto_pagado": total_usdt_carrito,
+                            "monto_pagado_bcv": total_bcv_carrito,
+                            "fecha": fecha_entrega,
+                            "pagada": True
+                        }]
+                        
+                        binance_data["saldo_actual"] += total_usdt_carrito
+                        binance_data["movimientos"].append({
+                            "fecha": str(date.today()),
+                            "tipo": "Entrada USDT (Venta Contado Carrito Cloud)",
+                            "monto": total_usdt_carrito,
+                            "descripcion": f"Venta Multiproducto Contado: {', '.join(productos_resumen_factura)}"
+                        })
+                        guardar_binance_cloud(binance_data)
+
+                    venta_reg = {
+                        "id_venta": len(ventas) + 1,
+                        "producto": " / ".join(productos_resumen_factura),
+                        "talla": "Múltiple",
+                        "cantidad": sum(item['cantidad'] for item in st.session_state.carrito_ventas),
+                        "total_venta_usdt": total_usdt_carrito,
+                        "total_venta_bcv": total_bcv_carrito,
+                        "ganancia_usdt": ganancia_total_lote,
+                        "reinversion_usdt": inversion_total_lote,
+                        "estado": estado,
+                        "cliente": cliente,
+                        "telefono": telefono_cliente.strip(),
+                        "fecha_entrega": fecha_entrega,
+                        "cuotas": cuotas,
+                        "detalle_cuotas": detalle_cuotas,
+                        "items_carrito": st.session_state.carrito_ventas.copy()
+                    }
+                    
+                    guardar_venta_cloud(venta_reg)
+                    st.session_state.carrito_ventas = []
+                    
+                    st.success("✅ ¡Venta multiproducto registrada y respaldada en Firebase Cloud exitosamente!")
+                    
+                    st.markdown("---")
+                    st.markdown("### 🧾 Factura Digital Consolidada (Tómale capture y envíala por WhatsApp)")
+                    
+                    if telefono_cliente.strip():
+                        tel_limpio = ''.join(filter(str.isdigit, telefono_cliente.strip()))
+                        if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
+                            tel_limpio = "58" + tel_limpio
+                        
+                        msg_wa = f"🔥 *LUIS STORE* 🔥\nFactura N° #{venta_reg['id_venta']}\nCliente: {cliente}\nFecha: {fecha_entrega}\n\n*Detalle de compra:*\n"
+                        for itm in venta_reg["items_carrito"]:
+                            sub_b = itm.get('precio_bcv', 0) * itm['cantidad']
