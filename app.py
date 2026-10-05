@@ -4,17 +4,11 @@ import pandas as pd
 from datetime import date
 import urllib.parse
 import json
+import base64
 
 # Importar Firebase Admin SDK para Python
 import firebase_admin
 from firebase_admin import credentials, firestore
-
-# Configuración de carpetas locales para fotos (si las subes localmente)
-CARPETA_FOTOS = "fotos_productos"
-if not os.path.exists(CARPETA_FOTOS):
-    os.makedirs(CARPETA_FOTOS)
-
-LOGO_PATH = os.path.join(CARPETA_FOTOS, "logo_luisstore.jpg")
 
 # Inicialización segura de Firebase usando st.secrets (para Streamlit Cloud y GitHub) o archivo local si existiera
 if not firebase_admin._apps:
@@ -44,7 +38,6 @@ def cargar_inventario_cloud():
 
 def guardar_inventario_cloud(inventario_lista):
     if not db: return
-    # Sincronización optimizada guardando cada documento por su id_doc o agregando nuevos
     for i, item in enumerate(inventario_lista):
         if 'id_doc' in item and item['id_doc']:
             doc_id = item['id_doc']
@@ -114,7 +107,7 @@ if 'carrito_ventas' not in st.session_state:
 # Configuración de la página web
 st.set_page_config(page_title="LUIS STORE | Control & Ventas Cloud", layout="wide")
 
-# Estilos CSS con diseño de factura elegante (Fondo blanco optimizado para impresión y detalles dorados)
+# Estilos CSS con diseño de factura elegante
 st.markdown("""
     <style>
         .invoice-card {
@@ -163,11 +156,7 @@ if not db:
 
 # Barra lateral con el Logo y Navegación completa intacta
 with st.sidebar:
-    if os.path.exists(LOGO_PATH):
-        st.image(LOGO_PATH, use_container_width=True)
-    else:
-        st.markdown("## 🔥 LUIS STORE (Cloud)")
-    
+    st.markdown("## 🔥 LUIS STORE (Cloud)")
     st.markdown("---")
     menu = st.sidebar.selectbox("Menú Principal", [
         "🛒 Registrar Venta", 
@@ -197,8 +186,12 @@ if menu == "🛒 Registrar Venta":
         
         producto_elegido = inventario[idx]
         
-        if producto_elegido.get('foto') and os.path.exists(producto_elegido['foto']):
-            st.image(producto_elegido['foto'], width=130, caption=f"{producto_elegido['nombre']} - Talla {producto_elegido['talla']}")
+        if producto_elegido.get('foto_base64'):
+            try:
+                img_bytes = base64.b64decode(producto_elegido['foto_base64'])
+                st.image(img_bytes, width=130, caption=f"{producto_elegido['nombre']} - Talla {producto_elegido['talla']}")
+            except Exception:
+                pass
         
         cantidad_a_vender = st.number_input("Cantidad:", min_value=1, max_value=max(1, producto_elegido['stock']), step=1, key="input_cant_carrito")
         
@@ -428,8 +421,12 @@ elif menu == "📦 Módulo de Inventario (Tallas y Stock)":
             st.markdown("---")
             col_img, col_info = st.columns([1, 3])
             with col_img:
-                if p.get('foto') and os.path.exists(p['foto']):
-                    st.image(p['foto'], width=120)
+                if p.get('foto_base64'):
+                    try:
+                        img_bytes = base64.b64decode(p['foto_base64'])
+                        st.image(img_bytes, width=120)
+                    except Exception:
+                        st.info("Sin foto")
                 else:
                     st.info("Sin foto")
             with col_info:
@@ -460,11 +457,9 @@ elif menu == "➕ Agregar Nuevo Producto / Talla":
             if nombre.strip() == "":
                 st.error("❌ El nombre del producto no puede estar vacío.")
             else:
-                ruta_foto = ""
+                foto_b64 = ""
                 if foto_subida is not None:
-                    ruta_foto = os.path.join(CARPETA_FOTOS, f"{nombre}_{talla}_{len(inventario)}.jpg")
-                    with open(ruta_foto, "wb") as f:
-                        f.write(foto_subida.getbuffer())
+                    foto_b64 = base64.b64encode(foto_subida.read()).decode("utf-8")
 
                 nuevo_prod = {
                     "nombre": nombre.strip(),
@@ -474,10 +469,10 @@ elif menu == "➕ Agregar Nuevo Producto / Talla":
                     "precio_usdt": precio_usdt,
                     "precio_bcv": precio_bcv,
                     "stock": int(stock),
-                    "foto": ruta_foto
+                    "foto_base64": foto_b64
                 }
                 db.collection("inventario").add(nuevo_prod)
-                st.success(f"✅ ¡{nombre} (Talla: {talla}) guardado con éxito en Firebase Cloud!")
+                st.success(f"✅ ¡{nombre} (Talla: {talla}) guardado con éxito y respaldado en la nube con su foto!")
                 st.rerun()
 
 # ---------------------------------------------------------
@@ -495,8 +490,12 @@ elif menu == "✏️ Editar / Eliminar / Fotos (Inventario)":
         
         prod_actual = inventario[idx_edit]
         
-        if prod_actual.get('foto') and os.path.exists(prod_actual['foto']):
-            st.image(prod_actual['foto'], width=150, caption="Foto actual")
+        if prod_actual.get('foto_base64'):
+            try:
+                img_bytes = base64.b64decode(prod_actual['foto_base64'])
+                st.image(img_bytes, width=150, caption="Foto actual")
+            except Exception:
+                pass
             
         with st.form("form_editar"):
             nuevo_nombre = st.text_input("Nombre de la prenda:", value=prod_actual['nombre'])
@@ -507,10 +506,17 @@ elif menu == "✏️ Editar / Eliminar / Fotos (Inventario)":
             nuevo_precio_bcv = st.number_input("Precio oficial ($ a BCV):", min_value=0.0, value=float(prod_actual.get('precio_bcv', 0)), step=0.5)
             nuevo_stock = st.number_input("Stock total actual:", min_value=0, value=int(prod_actual['stock']), step=1)
             
+            nueva_foto_subida = st.file_uploader("Actualizar foto del producto (Opcional):", type=["jpg", "png", "jpeg"], key="edit_foto_file")
+            
             guardar_cambios = st.form_submit_button("Actualizar Producto Cloud")
             
             if guardar_cambios:
                 prod_id_doc = prod_actual.get('id_doc')
+                
+                foto_b64_act = prod_actual.get('foto_base64', '')
+                if nueva_foto_subida is not None:
+                    foto_b64_act = base64.b64encode(nueva_foto_subida.read()).decode("utf-8")
+
                 datos_act = {
                     "nombre": nuevo_nombre.strip(),
                     "talla": nueva_talla.strip(),
@@ -519,7 +525,7 @@ elif menu == "✏️ Editar / Eliminar / Fotos (Inventario)":
                     "precio_usdt": nuevo_precio_usdt,
                     "precio_bcv": nuevo_precio_bcv,
                     "stock": int(nuevo_stock),
-                    "foto": prod_actual.get('foto', '')
+                    "foto_base64": foto_b64_act
                 }
                 if prod_id_doc:
                     db.collection("inventario").document(prod_id_doc).set(datos_act)
@@ -667,7 +673,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                             abono_bcv = st.number_input(f"Monto abonado ($ a BCV):", value=float(deuda_esta_cuota_bcv), step=0.5, key=key_abono_bcv)
                             
                             st.markdown("---")
-                            st.markdown("✏️ **Personalizar Comprobante para el Cliente:**")
+                            st.markdown("✏️️ **Personalizar Comprobante para el Cliente:**")
                             monto_factura_bcv = st.number_input("Monto a mostrar en factura ($ a BCV):", value=float(abono_bcv), step=0.5, key=key_fact_bcv)
                             resta_factura_bcv = st.number_input("Resta a mostrar en factura ($ a BCV):", value=float(resta_bcv - abono_bcv), step=0.5, key=key_fact_resta)
                             
