@@ -869,17 +869,32 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         total_ganancias = df_ventas['ganancia_usdt'].sum()
         total_reinversion = df_ventas['reinversion_usdt'].sum()
         
-        # Cálculo de la Inversión Total Actual en el Inventario (Costo proveedor + Envío por cada unidad en stock)
-        inversion_inventario_total = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
+        # Cálculos de inversión total en el inventario actual (Costo + Envio por stock disponible)
+        inversion_inv_usdt = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
+        
+        # Calculamos la proporción promedio de tasa BCV en base a las ventas existentes (o estimación 1:1 si no hay ventas)
+        tasa_promedio_bcv = 1.0
+        if not df_ventas.empty and 'total_venta_usdt' in df_ventas.columns and 'total_venta_bcv' in df_ventas.columns:
+            suma_usdt_v = df_ventas['total_venta_usdt'].sum()
+            suma_bcv_v = df_ventas['total_venta_bcv'].sum()
+            if suma_usdt_v > 0:
+                tasa_promedio_bcv = suma_bcv_v / suma_usdt_v
+        
+        inversion_inv_bcv = inversion_inv_usdt * tasa_promedio_bcv
         
         st.markdown("---")
-        # Mostramos 5 columnas con métricas detalladas al pelo
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
         col2.metric("Venta Total ($ a BCV)", f"${total_acum_bcv:.2f}")
         col3.metric("Ganancias Totales", f"${total_ganancias:.2f}")
         col4.metric("Fondo de Reinversión", f"${total_reinversion:.2f}")
-        col5.metric("Inversión en Inventario", f"${inversion_inventario_total:.2f}")
+        
+        # Nueva fila para mostrar la inversión exacta del inventario en USDT y BCV
+        st.markdown("---")
+        st.markdown("### 📦 Inversión Total en Stock Actual (Firebase)")
+        col_inv1, col_inv2 = st.columns(2)
+        col_inv1.metric("Inversión Inventario (USDT)", f"${inversion_inv_usdt:.2f}")
+        col_inv2.metric("Inversión Inventario ($ a BCV)", f"${inversion_inv_bcv:.2f}")
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
