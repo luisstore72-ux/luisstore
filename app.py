@@ -869,12 +869,17 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         total_ganancias = df_ventas['ganancia_usdt'].sum()
         total_reinversion = df_ventas['reinversion_usdt'].sum()
         
+        # Cálculo de la Inversión Total Actual en el Inventario (Costo proveedor + Envío por cada unidad en stock)
+        inversion_inventario_total = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
+        
         st.markdown("---")
-        col1, col2, col3, col4 = st.columns(4)
+        # Mostramos 5 columnas con métricas detalladas al pelo
+        col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
         col2.metric("Venta Total ($ a BCV)", f"${total_acum_bcv:.2f}")
         col3.metric("Ganancias Totales", f"${total_ganancias:.2f}")
         col4.metric("Fondo de Reinversión", f"${total_reinversion:.2f}")
+        col5.metric("Inversión en Inventario", f"${inversion_inventario_total:.2f}")
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
