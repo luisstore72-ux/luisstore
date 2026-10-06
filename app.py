@@ -40,7 +40,6 @@ def cargar_inventario_cloud():
 
 def guardar_inventario_cloud(inventario_lista):
     if not db: return
-    # Sincronización optimizada guardando cada documento por su id_doc o agregando nuevos
     for i, item in enumerate(inventario_lista):
         if 'id_doc' in item and item['id_doc']:
             doc_id = item['id_doc']
@@ -110,7 +109,7 @@ if 'carrito_ventas' not in st.session_state:
 # Configuración de la página web
 st.set_page_config(page_title="LUIS STORE | Control & Ventas Cloud", layout="wide")
 
-# Estilos CSS con diseño de factura elegante (Fondo blanco optimizado para impresión y detalles dorados)
+# Estilos CSS con diseño de factura elegante
 st.markdown("""
     <style>
         .invoice-card {
@@ -435,7 +434,7 @@ elif menu == "📦 Módulo de Inventario (Tallas y Stock)":
             with col_info:
                 st.write(f"**ID:** {i} | **Prenda:** {p['nombre']} (Talla: {p['talla']})")
                 st.write(f"**Stock Disponible:** {p['stock']} unidades")
-                st.write(f"**Precio oficial ($ a BCV):** ${p.get('precio_bcv', 0):.2f}")
+                st.write(f"**Precio oficial ($a BCV):**${p.get('precio_bcv', 0):.2f}")
 
 # ---------------------------------------------------------
 # 3. AGREGAR NUEVO PRODUCTO O TALLA AL INVENTARIO
@@ -710,201 +709,4 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                                         "fecha": str(date.today()),
                                         "tipo": "Entrada USDT (Abono Cuotas Cloud)",
                                         "monto": abono_usdt,
-                                        "descripcion": f"Abono Cuota #{nro_c} - Cliente: {v.get('cliente', 'Cliente')} (Venta #{v['id_venta']})"
-                                    })
-                                    guardar_binance_cloud(binance_data)
-                                    
-                                    if all(item.get('pagada', False) for item in cuotas_detalle):
-                                        v['estado'] = "PAGADO"
-                                        st.success(f"✅ ¡Venta #{v['id_venta']} saldada por completo!")
-                                    else:
-                                        st.success(f"✅ ¡Abono registrado en la nube con éxito!")
-
-                                    if v.get('telefono'):
-                                        tel_limpio = ''.join(filter(str.isdigit, v['telefono']))
-                                        if not tel_limpio.startswith("58") and len(tel_limpio) == 10:
-                                            tel_limpio = "58" + tel_limpio
-                                        msg_abono = f"Hola {v.get('cliente', 'Cliente')}, registramos tu abono de la Cuota #{nro_c} (Venta #{v['id_venta']}). Abonado: ${monto_factura_bcv:.2f} BCV. Restante: ${resta_factura_bcv:.2f} BCV. ¡Gracias!\n_En breve te enviaremos la imagen de tu recibo._"
-                                        url_wa_abono = f"https://wa.me/{tel_limpio}?text={urllib.parse.quote(msg_abono)}"
-                                        st.markdown(f'<a href="{url_wa_abono}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:10px;">💬 Enviar Comprobante por WhatsApp</button></a>', unsafe_allow_html=True)
-
-                                    st.markdown("---")
-                                    st.markdown("### 🧾 Comprobante de Abono (Listo para capture)")
-                                    factura_abono = (
-                                        '<div class="invoice-card">'
-                                        '<div class="invoice-header">'
-                                        '<div>'
-                                        '<h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>'
-                                        f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Comprobante de Abono — Cuota #{nro_c}</p>'
-                                        '</div>'
-                                        '<div style="text-align: right;">'
-                                        f'<p style="margin:0; font-size:12px; color:#555555;">Ref: #{v["id_venta"]}<br>Fecha: {date.today()}</p>'
-                                        '</div>'
-                                        '</div>'
-                                        f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v.get("cliente", "Cliente")}<br><b>Productos:</b> {v["producto"]}</p>'
-                                        '<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e0e0e0; margin-bottom:15px;">'
-                                        f'<p style="margin:0; font-size:14px; color:#2e7d32; font-weight:bold;">MONTO ABONADO: ${monto_factura_bcv:.2f} a BCV</p>'
-                                        f'<p style="margin:8px 0 0 0; font-size:14px; color:#c62828; font-weight:bold;">RESTA POR PAGAR: ${resta_factura_bcv:.2f} a BCV</p>'
-                                        '</div>'
-                                        '<div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">'
-                                        'Pedidos: 0412-4543304 | Instagram: @luisstore.ve<br>'
-                                        '<b>¡Gracias por tu abono!</b>'
-                                        '</div>'
-                                        '</div>'
-                                    )
-                                    st.markdown(factura_abono, unsafe_allow_html=True)
-                                    
-                                    if 'id_doc' in v:
-                                        actualizar_venta_cloud(v['id_doc'], v)
-                                    st.rerun()
-
-            with col3:
-                if st.button(f"Marcar Todo Pagado #{v['id_venta']}", key=f"pay_all_{idx_v}_v{v['id_venta']}"):
-                    cuotas_detalle = v.get('detalle_cuotas', [])
-                    total_deuda_restante_usdt = sum(c.get('monto_estimado', 0) - c.get('monto_pagado', 0) for c in cuotas_detalle if not c.get('pagada', False))
-                    
-                    for c in cuotas_detalle:
-                        c['monto_pagado'] = c.get('monto_estimado', 0)
-                        c['monto_pagado_bcv'] = c.get('monto_estimado', 0) * tasa_bcv_ref
-                        c['pagada'] = True
-                    v['estado'] = "PAGADO"
-                    
-                    if total_deuda_restante_usdt > 0:
-                        binance_data["saldo_actual"] += total_deuda_restante_usdt
-                        binance_data["movimientos"].append({
-                            "fecha": str(date.today()),
-                            "tipo": "Entrada USDT (Pago Total Cuotas Cloud)",
-                            "monto": total_deuda_restante_usdt,
-                            "descripcion": f"Saldado completo Venta #{v['id_venta']} - Cliente: {v.get('cliente', 'Cliente')}"
-                        })
-                        guardar_binance_cloud(binance_data)
-
-                    if 'id_doc' in v:
-                        actualizar_venta_cloud(v['id_doc'], v)
-                    st.success(f"¡Venta #{v['id_venta']} marcada como pagada en la nube!")
-                    st.rerun()
-
-# ---------------------------------------------------------
-# 7. HISTORIAL, FACTURACIÓN & FINANZAS
-# ---------------------------------------------------------
-elif menu == "📊 Historial, Facturación & Finanzas":
-    st.subheader("📊 Historial General Cloud, Recibos Digitales & Finanzas")
-    
-    if not ventas:
-        st.info("No hay ventas registradas en la nube todavía.")
-    else:
-        df_ventas = pd.DataFrame(ventas)
-        st.dataframe(df_ventas[['id_venta', 'cliente', 'telefono', 'producto', 'cantidad', 'estado', 'fecha_entrega', 'cuotas', 'total_venta_usdt', 'total_venta_bcv', 'ganancia_usdt', 'reinversion_usdt']])
-        
-        st.markdown("---")
-        st.subheader("🧾 Generar Factura Digital Profesional para WhatsApp")
-        opciones_factura = [f"Venta #{v['id_venta']} — Cliente: {v.get('cliente', 'Cliente')} — {v['producto']}" for v in ventas]
-        sel_factura = st.selectbox("Selecciona la venta para ver su factura:", opciones_factura)
-        
-        if sel_factura:
-            id_sel = int(sel_factura.split("—")[0].replace("Venta #", "").strip())
-            v_encontrada = next((v for v in ventas if v['id_venta'] == id_sel), None)
-            
-            if v_encontrada:
-                total_bcv_val = v_encontrada.get('total_venta_bcv', 0)
-                cuotas_d = v_encontrada.get('detalle_cuotas', [])
-                tasa_ref = total_bcv_val / v_encontrada['total_venta_usdt'] if v_encontrada.get('total_venta_usdt', 0) > 0 else 0
-                
-                total_pagado_bcv_val = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_d)
-                resta_bcv_val = total_bcv_val - total_pagado_bcv_val
-
-                if v_encontrada.get('telefono'):
-                    tel_h = ''.join(filter(str.isdigit, v_encontrada['telefono']))
-                    if not tel_h.startswith("58") and len(tel_h) == 10:
-                        tel_h = "58" + tel_h
-                    msg_h = f"Hola {v_encontrada.get('cliente', 'Cliente')}, detalle de factura N° #{v_encontrada['id_venta']}: Total: ${total_bcv_val:.2f} BCV. Estado: {v_encontrada['estado']}. ¡Gracias!\n_En breve te enviaremos la imagen de tu factura digital._"
-                    url_wa_h = f"https://wa.me/{tel_h}?text={urllib.parse.quote(msg_h)}"
-                    st.markdown(f'<a href="{url_wa_h}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; margin-bottom:15px;">💬 Enviar esta Factura por WhatsApp</button></a>', unsafe_allow_html=True)
-
-                texto_resta_html = ""
-                if v_encontrada['estado'] == "CUOTAS (Pendiente)":
-                    texto_resta_html = f'<p style="margin:4px 0; font-size:13px; color:#c62828;"><b>Resta por pagar:</b> ${resta_bcv_val:.2f} a BCV</p>'
-
-                filas_hist = ""
-                if "items_carrito" in v_encontrada:
-                    for itm in v_encontrada["items_carrito"]:
-                        sub_bcv_h = itm.get('precio_bcv', 0) * itm['cantidad']
-                        filas_hist += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td><b>${sub_bcv_h:.2f}</b></td></tr>'
-                else:
-                    filas_hist += f'<tr><td>{v_encontrada["cantidad"]}</td><td>{v_encontrada["producto"]} (Talla: {v_encontrada["talla"]})</td><td><b>${total_bcv_val:.2f}</b></td></tr>'
-
-                factura_historial = (
-                    '<div class="invoice-card">'
-                    '<div class="invoice-header">'
-                    '<div>'
-                    '<h2 style="margin:0; color:#b89728; font-size:22px; font-weight:bold; letter-spacing:1px;">LUIS STORE</h2>'
-                    '<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">Tienda Online | Cabimas, Zulia<br>Tel: 0412-4543304</p>'
-                    '</div>'
-                    '<div style="text-align: right;">'
-                    '<h3 style="margin:0; color:#222222; font-size:15px; letter-spacing:1px;">FACTURA</h3>'
-                    f'<p style="margin:5px 0 0 0; font-size:12px; color:#555555;">N°: #{v_encontrada["id_venta"]}<br>Fecha: {v_encontrada["fecha_entrega"]}</p>'
-                    '</div>'
-                    '</div>'
-                    f'<p style="margin-bottom:15px; font-size:13px; color:#222222;"><b>Cliente:</b> {v_encontrada.get("cliente", "Cliente")}</p>'
-                    '<table class="invoice-table">'
-                    '<tr><th>Cant</th><th>Descripción</th><th>Total</th></tr>'
-                    f'{filas_hist}'
-                    '</table>'
-                    '<div style="text-align: right; margin-top:15px;">'
-                    f'<p style="margin:4px 0; font-size:13px; color:#555555;"><b>Condición:</b> {v_encontrada["estado"]}</p>'
-                    f'{texto_resta_html}'
-                    f'<h2 style="color:#b89728; margin:8px 0; font-size:20px;">TOTAL: ${total_bcv_val:.2f} a BCV</h2>'
-                    '</div>'
-                    '<hr style="border:0; border-top:1px solid #dddddd; margin:20px 0;">'
-                    '<div style="text-align: center; font-size: 11px; color: #666666; letter-spacing:0.5px;">'
-                    'Instagram: @luisstore.ve | TikTok: @luisstorecabimas<br>'
-                    '<b>¡Gracias por tu compra en Luis Store!</b>'
-                    '</div>'
-                    '</div>'
-                )
-                st.markdown(factura_historial, unsafe_allow_html=True)
-
-        total_acum_usdt = df_ventas['total_venta_usdt'].sum()
-        total_acum_bcv = df_ventas.get('total_venta_bcv', pd.Series([0]*len(df_ventas))).sum()
-        total_ganancias = df_ventas['ganancia_usdt'].sum()
-        total_reinversion = df_ventas['reinversion_usdt'].sum()
-        
-        # Cálculos de inversión total en el inventario actual (Costo + Envio por stock disponible)
-        inversion_inv_usdt = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
-        
-        # Calculamos la proporción promedio de tasa BCV en base a las ventas existentes (o estimación 1:1 si no hay ventas)
-        tasa_promedio_bcv = 1.0
-        if not df_ventas.empty and 'total_venta_usdt' in df_ventas.columns and 'total_venta_bcv' in df_ventas.columns:
-            suma_usdt_v = df_ventas['total_venta_usdt'].sum()
-            suma_bcv_v = df_ventas['total_venta_bcv'].sum()
-            if suma_usdt_v > 0:
-                tasa_promedio_bcv = suma_bcv_v / suma_usdt_v
-        
-        inversion_inv_bcv = inversion_inv_usdt * tasa_promedio_bcv
-        
-        st.markdown("---")
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
-        col2.metric("Venta Total ($ a BCV)", f"${total_acum_bcv:.2f}")
-        col3.metric("Ganancias Totales", f"${total_ganancias:.2f}")
-        col4.metric("Fondo de Reinversión", f"${total_reinversion:.2f}")
-        
-        # Nueva fila para mostrar la inversión exacta del inventario en USDT y BCV
-        st.markdown("---")
-        st.markdown("### 📦 Inversión Total en Stock Actual (Firebase)")
-        col_inv1, col_inv2 = st.columns(2)
-        col_inv1.metric("Inversión Inventario (USDT)", f"${inversion_inv_usdt:.2f}")
-        col_inv2.metric("Inversión Inventario ($ a BCV)", f"${inversion_inv_bcv:.2f}")
-        
-        st.markdown("---")
-        st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
-        opciones_borrar = [f"ID Venta #{v['id_venta']} — Cliente: {v.get('cliente', 'Cliente')} — Prenda: {v['producto']} (${v['total_venta_usdt']} USDT)" for v in ventas]
-        sel_borrar = st.selectbox("Selecciona la venta que deseas eliminar del historial:", opciones_borrar)
-        
-        if st.button("Eliminar Venta Seleccionada", type="primary"):
-            id_a_borrar = int(sel_borrar.split("—")[0].replace("ID Venta #", "").strip())
-            v_borrar = next((v for v in ventas if v['id_venta'] == id_a_borrar), None)
-            if v_borrar and 'id_doc' in v_borrar:
-                eliminar_venta_cloud(v_borrar['id_doc'])
-            st.success(f"✅ ¡La venta #{id_a_borrar} ha sido eliminada de Firebase correctamente!")
-            st.rerun()
+                                        "descripcion": f"Abono Cuota #{nro_c}
