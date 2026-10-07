@@ -564,7 +564,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
     st.subheader("🟡 Control Manual y Automático de Fondos en Binance (Cloud)")
     
     saldo_actual = binance_data.get("saldo_actual", 0.0)
-    st.metric("💰 Saldo Actual en Binance", f"${saldo_actual:,.2f} USDT")
+    st.metric("💰 Saldo Actual in Binance", f"${saldo_actual:,.2f} USDT")
     
     st.markdown("---")
     st.subheader("➕ / ➖ Registrar Entrada o Salida de USDT Manual")
@@ -827,8 +827,8 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 filas_hist = ""
                 if "items_carrito" in v_encontrada:
                     for itm in v_encontrada["items_carrito"]:
-                        sub_bcv_h = itm.get('precio_bcv', 0) * itm['cantidad']
-                        filas_hist += f'<tr><td>{itm["cantidad"]}</td><td>{itm["nombre"]} (Talla: {itm["talla"]})</td><td><b>${sub_bcv_h:.2f}</b></td></tr>'
+                        sub_bcv_h = itm.get('precio_bcv', 0) * itm.get('cantidad', 1)
+                        filas_hist += f'<tr><td>{itm.get("cantidad", 1)}</td><td>{itm.get("nombre", "Prenda")} (Talla: {itm.get("talla", "Única")})</td><td><b>${sub_bcv_h:.2f}</b></td></tr>'
                 else:
                     filas_hist += f'<tr><td>{v_encontrada["cantidad"]}</td><td>{v_encontrada["producto"]} (Talla: {v_encontrada["talla"]})</td><td><b>${total_bcv_val:.2f}</b></td></tr>'
 
@@ -876,32 +876,32 @@ elif menu == "📊 Historial, Facturación & Finanzas":
             if suma_usdt_v > 0:
                 tasa_promedio_bcv = suma_bcv_v / suma_usdt_v
 
-        # Cálculo de lo que queda en stock actualmente
+        # 1. Inversión del Stock Actual (Lo que está físico en inventario ahora mismo)
         inversion_stock_usdt = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
-        venta_potencial_stock_usdt = sum(p.get('precio_usdt', 0) * p.get('stock', 0) for p in inventario)
-        ganancia_potencial_stock_usdt = venta_potencial_stock_usdt - inversion_stock_usdt
 
-        # Totales Globales (Lo vendido + Lo que queda en stock en la BD)
-        inversion_total_historica_usdt = total_reinversion_realizada + inversion_stock_usdt
-        ganancia_total_proyectada_usdt = total_ganancias_realizadas + ganancia_potencial_stock_usdt
-
-        # Conversiones a BCV
+        # 2. INVERSIÓN TOTAL HISTÓRICA DE TODO EL NEGOCIO: 
+        # (Lo que costó todo el stock actual + Lo que costó toda la mercancía que ya se vendió)
+        inversion_total_historica_usdt = inversion_stock_usdt + total_reinversion_realizada
         inversion_total_historica_bcv = inversion_total_historica_usdt * tasa_promedio_bcv
-        ganancia_total_proyectada_bcv = ganancia_total_proyectada_usdt * tasa_promedio_bcv
+
+        # 3. GANANCIA TOTAL REALIZADA Y POTENCIAL:
+        # Lo que se ha ganado en las ventas registradas hasta hoy
+        ganancia_total_realizada_usdt = total_ganancias_realizadas
+        ganancia_total_realizada_bcv = total_ganancias_realizadas * tasa_promedio_bcv
 
         st.markdown("---")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
         col2.metric("Venta Total ($ a BCV)", f"${total_acum_bcv:.2f}")
-        col3.metric("Ganancias Totales", f"${total_ganancias_realizadas:.2f}")
-        col4.metric("Fondo de Reinversión", f"${total_reinversion_realizada:.2f}")
+        col3.metric("Ganancias Realizadas", f"${total_ganancias_realizadas:.2f}")
+        col4.metric("Inversión de lo Vendido", f"${total_reinversion_realizada:.2f}")
         
-        # Métrica solicitada: Inversión Total y Ganancia Total Proyectada de todo el inventario (vendido y en stock)
+        # Balance Global exacto pedido por ti
         st.markdown("---")
-        st.markdown("### 📦 Balance Global del Inventario (Firebase: Vendido + Stock)")
+        st.markdown("### 📦 Inversión y Ganancias Totales de Todo el Negocio (Firebase)")
         col_glob1, col_glob2 = st.columns(2)
-        col_glob1.metric("Inversión Total (Costo + Envíos)", f"${inversion_total_historica_usdt:.2f} USDT / ${inversion_total_historica_bcv:.2f} BCV")
-        col_glob2.metric("Ganancia Total Proyectada", f"${ganancia_total_proyectada_usdt:.2f} USDT / ${ganancia_total_proyectada_bcv:.2f} BCV")
+        col_glob1.metric("Inversión Total (Stock + Vendido)", f"${inversion_total_historica_usdt:.2f} USDT / ${inversion_total_historica_bcv:.2f} BCV")
+        col_glob2.metric("Ganancia Total Realizada (Ventas)", f"${ganancia_total_realizada_usdt:.2f} USDT / ${ganancia_total_realizada_bcv:.2f} BCV")
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
