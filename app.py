@@ -88,7 +88,7 @@ def guardar_binance_cloud(datos):
     if db:
         db.collection("binance").document("fondos").set(datos)
 
-# Cargar datos actualizados directamente desde Firebase Cloud
+# Cargar datos actuales desde Firebase
 inventario = cargar_inventario_cloud()
 ventas = cargar_ventas_cloud()
 binance_data = cargar_binance_cloud()
@@ -863,44 +863,18 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 )
                 st.markdown(factura_historial, unsafe_allow_html=True)
 
-        # CÁLCULO 100% AUTOMÁTICO BARRIDO DESDE FIREBASE:
+        # Cálculos automáticos directos de Firebase para las 4 métricas principales
         total_acum_usdt = df_ventas['total_venta_usdt'].sum()
         total_acum_bcv = df_ventas.get('total_venta_bcv', pd.Series([0]*len(df_ventas))).sum()
         total_ganancias_realizadas = df_ventas['ganancia_usdt'].sum()
         total_reinversion_realizada = df_ventas['reinversion_usdt'].sum()
         
-        # Tasa promedio BCV automática basada en las ventas reales registradas
-        tasa_promedio_bcv = 1.0
-        if not df_ventas.empty and 'total_venta_usdt' in df_ventas.columns and 'total_venta_bcv' in df_ventas.columns:
-            suma_usdt_v = df_ventas['total_venta_usdt'].sum()
-            suma_bcv_v = df_ventas['total_venta_bcv'].sum()
-            if suma_usdt_v > 0:
-                tasa_promedio_bcv = suma_bcv_v / suma_usdt_v
-
-        # 1. Inversión automática de todo el Stock actual en Firebase
-        inversion_stock_usdt = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
-
-        # 2. Inversión Total Histórica Automática (Stock Actual + Lo que costó lo que ya se vendió en cuotas o contado)
-        inversion_total_historica_usdt = inversion_stock_usdt + total_reinversion_realizada
-        inversion_total_historica_bcv = inversion_total_historica_usdt * tasa_promedio_bcv
-
-        # 3. Ganancia Total Realizada Automática de todas las ventas registradas
-        ganancia_total_realizada_usdt = total_ganancias_realizadas
-        ganancia_total_realizada_bcv = total_ganancias_realizadas * tasa_promedio_bcv
-
         st.markdown("---")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
         col2.metric("Venta Total ($ a BCV)", f"${total_acum_bcv:.2f}")
-        col3.metric("Ganancias Realizadas", f"${ganancia_total_realizada_usdt:.2f}")
-        col4.metric("Inversión de lo Vendido", f"${total_reinversion_realizada:.2f}")
-        
-        # Panel de Resumen Automático Global directo de Firebase
-        st.markdown("---")
-        st.markdown("### 📦 Resumen Automático Global (Inventario + Ventas + Cuotas en Firebase)")
-        col_glob1, col_glob2 = st.columns(2)
-        col_glob1.metric("Inversión Total Automática (Stock + Vendido)", f"${inversion_total_historica_usdt:.2f} USDT / ${inversion_total_historica_bcv:.2f} BCV")
-        col_glob2.metric("Ganancia Total Realizada Automática", f"${ganancia_total_realizada_usdt:.2f} USDT / ${ganancia_total_realizada_bcv:.2f} BCV")
+        col3.metric("Ganancias Totales", f"${total_ganancias_realizadas:.2f}")
+        col4.metric("Fondo de Reinversión", f"${total_reinversion_realizada:.2f}")
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
