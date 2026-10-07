@@ -564,7 +564,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
     st.subheader("🟡 Control Manual y Automático de Fondos en Binance (Cloud)")
     
     saldo_actual = binance_data.get("saldo_actual", 0.0)
-    st.metric("💰 Saldo Actual in Binance", f"${saldo_actual:,.2f} USDT")
+    st.metric("💰 Saldo Actual en Binance", f"${saldo_actual:,.2f} USDT")
     
     st.markdown("---")
     st.subheader("➕ / ➖ Registrar Entrada o Salida de USDT Manual")
@@ -784,7 +784,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                     st.rerun()
 
 # ---------------------------------------------------------
-# 7. HISTORIAL, FACTURACIÓN & FINANZAS
+# 7. HISTORIAL, FACTURACIÓN & Finanzas
 # ---------------------------------------------------------
 elif menu == "📊 Historial, Facturación & Finanzas":
     st.subheader("📊 Historial General Cloud, Recibos Digitales & Finanzas")
@@ -876,13 +876,14 @@ elif menu == "📊 Historial, Facturación & Finanzas":
             if suma_usdt_v > 0:
                 tasa_promedio_bcv = suma_bcv_v / suma_usdt_v
 
-        # 1. Inversión de lo que está en stock actualmente
+        # 1. Inversión Total (Costo Stock Actual + Costo de lo que ya se vendió/agotado)
         inversion_stock_actual_usdt = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
-        inversion_stock_actual_bcv = inversion_stock_actual_usdt * tasa_promedio_bcv
-
-        # 2. Inversión Total (Stock Actual + Lo que ya se vendió / agotado)
         inversion_total_global_usdt = inversion_stock_actual_usdt + total_reinversion_realizada
         inversion_total_global_bcv = inversion_total_global_usdt * tasa_promedio_bcv
+
+        # 2. Monto Total Proyectado cuando se venda TODO el inventario actual (Suma del precio de venta de lo que queda en stock)
+        venta_proyectada_stock_usdt = sum(p.get('precio_usdt', 0) * p.get('stock', 0) for p in inventario)
+        venta_proyectada_stock_bcv = sum(p.get('precio_bcv', 0) * p.get('stock', 0) for p in inventario)
 
         # Las 4 métricas originales intactas arriba
         st.markdown("---")
@@ -892,12 +893,19 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         col3.metric("Ganancias Totales", f"${total_ganancias_realizadas:.2f}")
         col4.metric("Fondo de Reinversión", f"${total_reinversion_realizada:.2f}")
         
-        # Módulo abajo con la Inversión Total (Stock actual + Agotado/Vendido)
+        # Módulo abajo con la Inversión Total Global
         st.markdown("---")
         st.markdown("### 📦 Inversión Total (Stock Actual + Agotado / Vendido)")
         col_inv1, col_inv2 = st.columns(2)
         col_inv1.metric("Inversión Total en USDT", f"${inversion_total_global_usdt:.2f} USDT")
         col_inv2.metric("Inversión Total en BCV", f"${inversion_total_global_bcv:.2f} BCV")
+
+        # Módulo abajo con el Monto Total cuando se venda todo el stock actual
+        st.markdown("---")
+        st.markdown("### 💵 Monto Total a Recaudar al Vender Todo el Stock Actual")
+        col_vt1, col_vt2 = st.columns(2)
+        col_vt1.metric("Venta Proyectada Stock (USDT)", f"${venta_proyectada_stock_usdt:.2f} USDT")
+        col_vt2.metric("Venta Proyectada Stock (BCV)", f"${venta_proyectada_stock_bcv:.2f} BCV")
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
