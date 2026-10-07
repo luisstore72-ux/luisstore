@@ -784,7 +784,7 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                     st.rerun()
 
 # ---------------------------------------------------------
-# 7. HISTORIAL, FACTURACIÓN & Finanzas
+# 7. HISTORIAL, FACTURACIÓN & FINANZAS
 # ---------------------------------------------------------
 elif menu == "📊 Historial, Facturación & Finanzas":
     st.subheader("📊 Historial General Cloud, Recibos Digitales & Finanzas")
@@ -881,9 +881,12 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         inversion_total_global_usdt = inversion_stock_actual_usdt + total_reinversion_realizada
         inversion_total_global_bcv = inversion_total_global_usdt * tasa_promedio_bcv
 
-        # 2. Monto Total Proyectado cuando se venda TODO el inventario actual (Suma del precio de venta de lo que queda en stock)
+        # 2. Monto Total Global a Recaudar al Vender Absolutamente Todo (Lo que ya se vendió + Lo que queda en stock al precio oficial en BCV y USDT)
         venta_proyectada_stock_usdt = sum(p.get('precio_usdt', 0) * p.get('stock', 0) for p in inventario)
         venta_proyectada_stock_bcv = sum(p.get('precio_bcv', 0) * p.get('stock', 0) for p in inventario)
+
+        monto_total_recaudar_usdt = total_acum_usdt + venta_proyectada_stock_usdt
+        monto_total_recaudar_bcv = total_acum_bcv + venta_proyectada_stock_bcv
 
         # Las 4 métricas originales intactas arriba
         st.markdown("---")
@@ -900,12 +903,12 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         col_inv1.metric("Inversión Total en USDT", f"${inversion_total_global_usdt:.2f} USDT")
         col_inv2.metric("Inversión Total en BCV", f"${inversion_total_global_bcv:.2f} BCV")
 
-        # Módulo abajo con el Monto Total cuando se venda todo el stock actual
+        # Módulo abajo con el Monto Total Global a Recaudar (Ventas Históricas + Proyección de Stock Actual)
         st.markdown("---")
-        st.markdown("### 💵 Monto Total a Recaudar al Vender Todo el Stock Actual")
+        st.markdown("### 💵 Monto Total a Recaudar Global (Vendido + Todo el Stock Actual)")
         col_vt1, col_vt2 = st.columns(2)
-        col_vt1.metric("Venta Proyectada Stock (USDT)", f"${venta_proyectada_stock_usdt:.2f} USDT")
-        col_vt2.metric("Venta Proyectada Stock (BCV)", f"${venta_proyectada_stock_bcv:.2f} BCV")
+        col_vt1.metric("Monto Total a Recaudar (USDT)", f"${monto_total_recaudar_usdt:.2f} USDT")
+        col_vt2.metric("Monto Total a Recaudar (BCV)", f"${monto_total_recaudar_bcv:.2f} BCV")
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
