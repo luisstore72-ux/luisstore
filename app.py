@@ -564,7 +564,7 @@ elif menu == "🟡 Fondos Disponibles en Binance":
     st.subheader("🟡 Control Manual y Automático de Fondos en Binance (Cloud)")
     
     saldo_actual = binance_data.get("saldo_actual", 0.0)
-    st.metric("💰 Saldo Actual en Binance", f"${saldo_actual:,.2f} USDT")
+    st.metric("💰 Saldo Actual in Binance", f"${saldo_actual:,.2f} USDT")
     
     st.markdown("---")
     st.subheader("➕ / ➖ Registrar Entrada o Salida de USDT Manual")
@@ -863,18 +863,41 @@ elif menu == "📊 Historial, Facturación & Finanzas":
                 )
                 st.markdown(factura_historial, unsafe_allow_html=True)
 
-        # Cálculos automáticos directos de Firebase para las 4 métricas principales
         total_acum_usdt = df_ventas['total_venta_usdt'].sum()
         total_acum_bcv = df_ventas.get('total_venta_bcv', pd.Series([0]*len(df_ventas))).sum()
         total_ganancias_realizadas = df_ventas['ganancia_usdt'].sum()
         total_reinversion_realizada = df_ventas['reinversion_usdt'].sum()
         
+        # Tasa promedio BCV basada en las ventas
+        tasa_promedio_bcv = 1.0
+        if not df_ventas.empty and 'total_venta_usdt' in df_ventas.columns and 'total_venta_bcv' in df_ventas.columns:
+            suma_usdt_v = df_ventas['total_venta_usdt'].sum()
+            suma_bcv_v = df_ventas['total_venta_bcv'].sum()
+            if suma_usdt_v > 0:
+                tasa_promedio_bcv = suma_bcv_v / suma_usdt_v
+
+        # 1. Inversión de lo que está en stock actualmente
+        inversion_stock_actual_usdt = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario)
+        inversion_stock_actual_bcv = inversion_stock_actual_usdt * tasa_promedio_bcv
+
+        # 2. Inversión Total (Stock Actual + Lo que ya se vendió / agotado)
+        inversion_total_global_usdt = inversion_stock_actual_usdt + total_reinversion_realizada
+        inversion_total_global_bcv = inversion_total_global_usdt * tasa_promedio_bcv
+
+        # Las 4 métricas originales intactas arriba
         st.markdown("---")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Venta Total ($ USDT)", f"${total_acum_usdt:.2f}")
         col2.metric("Venta Total ($ a BCV)", f"${total_acum_bcv:.2f}")
         col3.metric("Ganancias Totales", f"${total_ganancias_realizadas:.2f}")
         col4.metric("Fondo de Reinversión", f"${total_reinversion_realizada:.2f}")
+        
+        # Módulo abajo con la Inversión Total (Stock actual + Agotado/Vendido)
+        st.markdown("---")
+        st.markdown("### 📦 Inversión Total (Stock Actual + Agotado / Vendido)")
+        col_inv1, col_inv2 = st.columns(2)
+        col_inv1.metric("Inversión Total en USDT", f"${inversion_total_global_usdt:.2f} USDT")
+        col_inv2.metric("Inversión Total en BCV", f"${inversion_total_global_bcv:.2f} BCV")
         
         st.markdown("---")
         st.subheader("🗑️ Eliminar Venta Errónea o de Prueba")
