@@ -1308,4 +1308,3 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
 
                 total_bcv_ref = v.get('total_venta_bcv', 0)
 
-                st.write(f"**Prenda(s):** {v['producto']}" 
