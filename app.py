@@ -632,18 +632,20 @@ elif menu == "🟡 Fondos Disponibles en Binance":
 elif menu == "📋 Cuentas por Cobrar (Cuotas)":
     st.subheader("📋 Cuentas Pendientes por Cobrar (Cloud)")
     
-    cuotas_pendientes = []
-    for v in ventas:
-        if v.get("estado") == "CUOTAS (Pendiente)":
-            cuotas_detalle = v.get("detalle_cuotas", [])
-            if any(not c.get("pagada", False) for c in cuotas_detalle):
-                cuotas_pendientes.append(v)
+    cuotas_pendientes = [v for v in ventas if v.get("estado") == "CUOTAS (Pendiente)"]
     
     if not cuotas_pendientes:
         st.success("🎉 ¡Excelente! No hay cuentas pendientes por cobrar en la nube.")
     else:
         for idx_v, v in enumerate(cuotas_pendientes):
             st.markdown("---")
+            
+            total_factura_bcv = v.get('total_venta_bcv', 0.0)
+            
+            # Sumar abonos realizados en la venta
+            monto_pagado_bcv = sum(c.get('monto_pagado_bcv', 0.0) for c in v.get("detalle_cuotas", []))
+            monto_restante_bcv = max(0.0, total_factura_bcv - monto_pagado_bcv)
+            
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.write(f"**ID Venta:** #{v['id_venta']}")
@@ -652,32 +654,70 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                     st.write(f"📱 **Tlf:** {v['telefono']}")
                 st.write(f"**Entrega:** {v.get('fecha_entrega', 'N/A')}")
             with col2:
-                total_bcv_ref = v.get('total_venta_bcv', 0)
                 st.write(f"**Prenda(s):** {v['producto']}")
-                st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
+                st.write(f"**Total Factura:** ${total_factura_bcv:.2f} a BCV")
             with col3:
-                st.write("**Detalle de Cuotas:**")
-                for idx_c, c in enumerate(v.get("detalle_cuotas", [])):
-                    st.write(f"• Cuota #{c['nro']}: ${c['monto_estimado']:.2f} USDT - {'✅ Pagada' if c['pagada'] else '❌ Pendiente'}")
-                    if not c['pagada']:
-                        if st.button(f"💵 Registrar Pago Cuota #{c['nro']} (Venta #{v['id_venta']})", key=f"btn_pago_cuota_{v['id_venta']}_{idx_c}"):
-                            c['pagada'] = True
-                            c['monto_pagado'] = c['monto_estimado']
-                            c['monto_pagado_bcv'] = c['monto_estimado'] # Ajuste si aplica BCV
+                st.write("**Historial de Cuotas / Abonos:**")
+                for c in v.get("detalle_cuotas", []):
+                    estado_str = f"✅ Pagada (${c.get('monto_pagado_bcv', 0):.2f} BCV / ${c.get('monto_pagado', 0):.2f} USDT)" if c.get('pagada') else "❌ Pendiente"
+                    st.write(f"• Cuota #{c['nro']} ({c.get('fecha', '')}): {estado_str}")
+
+            # Formulario para registrar abonos de libre monto
+            with st.expander(f"💵 Registrar Nuevo Abono / Cuota para Venta #{v['id_venta']}"):
+                with st.form(key=f"form_abono_{v['id_venta']}"):
+                    col_a1, col_a2 = st.columns(2)
+                    with col_a1:
+                        monto_abono_usdt = st.number_input("Monto ingresado en USDT (opcional / Binance):", min_value=0.0, value=0.0, step=0.5, key=f"abono_usdt_{v['id_venta']}")
+                    with col_a2:
+                        monto_abono_bcv = st.number_input("Monto abonado ($ a BCV):", min_value=0.0, value=float(monto_restante_bcv), step=0.5, key=f"abono_bcv_{v['id_venta']}")
+                    
+                    btn_confirmar_abono = st.form_submit_button(" Confirmar y Guardar Abono")
+                    
+                    if btn_confirmar_abono:
+                        if monto_abono_bcv <= 0 and monto_abono_usdt <= 0:
+                            st.error("❌ Ingresa un monto válido para abonar.")
+                        else:
+                            # Buscar cuota pendiente o agregar un nuevo registro de abono
+                            cuotas_det = v.get("detalle_cuotas", [])
+                            cuota_pen = next((c for c in cuotas_det if not c.get('pagada')), None)
                             
-                            # Actualizar en Firebase las cuotas y sumar a Binance
+                            if cuota_pen:
+                                cuota_pen['pagada'] = True
+                                cuota_pen['monto_pagado'] = monto_abono_usdt
+                                cuota_pen['monto_pagado_bcv'] = monto_abono_bcv
+                            else:
+                                cuotas_det.append({
+                                    "nro": len(cuotas_det) + 1,
+                                    "monto_estimado": monto_abono_usdt,
+                                    "monto_pagado": monto_abono_usdt,
+                                    "monto_pagado_bcv": monto_abono_bcv,
+                                    "fecha": str(date.today()),
+                                    "pagada": True
+                                })
+                            
+                            # Actualizar suma total pagada y verificar si se liquidó la venta completa
+                            nuevo_monto_pagado_bcv = sum(c.get('monto_pagado_bcv', 0.0) for c in cuotas_det)
+                            if nuevo_monto_pagado_bcv >= total_factura_bcv:
+                                v['estado'] = "PAGADO"
+                            
                             actualizar_venta_cloud(v['id_doc'], v)
                             
-                            binance_data["saldo_actual"] += c['monto_estimado']
-                            binance_data["movimientos"].append({
-                                "fecha": str(date.today()),
-                                "tipo": "Entrada USDT (Abono Cuota)",
-                                "monto": c['monto_estimado'],
-                                "descripcion": f"Pago Cuota #{c['nro']} - Venta #{v['id_venta']} ({v.get('cliente', '')})"
-                            })
-                            guardar_binance_cloud(binance_data)
-                            st.success(f"✅ ¡Cuota #{c['nro']} de la venta #{v['id_venta']} registrada como pagada y sumada a Binance!")
+                            # Registrar entrada en Binance solo si abonó en USDT
+                            if monto_abono_usdt > 0:
+                                binance_data["saldo_actual"] += monto_abono_usdt
+                                binance_data["movimientos"].append({
+                                    "fecha": str(date.today()),
+                                    "tipo": "Entrada USDT (Abono Cuota)",
+                                    "monto": monto_abono_usdt,
+                                    "descripcion": f"Abono Venta #{v['id_venta']} ({v.get('cliente', '')})"
+                                })
+                                guardar_binance_cloud(binance_data)
+                                
+                            st.success(f"✅ ¡Abono registrado exitosamente!")
                             st.rerun()
+
+            # Panel informativo con el estado actual de la factura a $ BCV
+            st.info(f"📊 **Estado Factura #{v['id_venta']}:**  Total: **${total_factura_bcv:.2f} a BCV** |  Abonado: **${monto_pagado_bcv:.2f} a BCV** | 🔴 Restante: **${monto_restante_bcv:.2f} a BCV**")
 
 # ---------------------------------------------------------
 # 7. HISTORIAL, FACTURACIÓN & FINANZAS
