@@ -1,11 +1,19 @@
-import os
+ import os
+
 import streamlit as st
+
 import pandas as pd
+
 from datetime import date
+
 import urllib.parse
+
 import json
+
 import base64
+
 import io
+
 from PIL import Image
 
 
@@ -1290,4 +1298,12 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
 
                 st.write(f"**Cliente:** {v.get('cliente', 'Cliente')}")
 
-                if 
+                if v.get('telefono'):
+
+                    st.write(f"📱 **Tlf:** {v['telefono']}")
+
+                st.write(f"**Entrega:** {v.get('fecha_entrega', 'N/A')}")
+
+            with col2:
+
+                total_bc 
