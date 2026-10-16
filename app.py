@@ -1,4 +1,4 @@
- import os
+import os
 
 import streamlit as st
 
@@ -1306,4 +1306,6 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
 
             with col2:
 
-                total_bc 
+                total_bcv_ref = v.get('total_venta_bcv', 0)
+
+                st.write(f"**Prenda(s):** {v['producto']}" 
