@@ -666,16 +666,24 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
 elif menu == "📊 Historial, Facturación & Finanzas":
     st.subheader("📊 Resumen Financiero General y Métricas Cloud")
 
-    # Suma de egresos/gastos registrados en el historial de Binance
-    total_gastos_inversion = sum(abs(m['monto']) for m in binance_data.get("movimientos", []) if m.get('monto', 0) < 0 or "Salida" in m.get('tipo', ''))
-
-    # Métricas generales tomadas del registro de ventas
+    # Métricas calculadas
     venta_total_usdt = sum(v.get('total_venta_usdt', 0) for v in ventas)
     venta_total_bcv = sum(v.get('total_venta_bcv', 0) for v in ventas)
     ganancias_totales = sum(v.get('ganancia_usdt', 0) for v in ventas)
     fondo_reinversion = sum(v.get('reinversion_usdt', 0) for v in ventas)
 
-    # Filas de tarjetas financieras con la nueva tarjeta de Gastos al lado de Fondo de Reinversión
+    # Cálculo automático de gastos (suma de salidas en el historial de Binance)
+    total_gastos = sum(abs(m.get('monto', 0)) for m in binance_data.get("movimientos", []) if m.get('monto', 0) < 0 or "Salida" in m.get('tipo', ''))
+
+    # Métricas de Inversión (Stock Actual + Vendido)
+    inversion_usdt = sum((p.get('costo_usdt', 0) + p.get('envio_usdt', 0)) * p.get('stock', 0) for p in inventario) + fondo_reinversion
+    inversion_bcv = sum(p.get('precio_bcv', 0) * p.get('stock', 0) for p in inventario) + venta_total_bcv
+
+    # Monto Total a Recaudar Global
+    monto_recaudar_usdt = venta_total_usdt + sum(p.get('precio_usdt', 0) * p.get('stock', 0) for p in inventario)
+    monto_recaudar_bcv = venta_total_bcv + sum(p.get('precio_bcv', 0) * p.get('stock', 0) for p in inventario)
+
+    # 1. Fila de Métricas Principales (con la nueva tarjeta de Gastos al lado de Fondo de Reinversión)
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("Venta Total ($ USDT)", f"${venta_total_usdt:,.2f}")
@@ -686,7 +694,27 @@ elif menu == "📊 Historial, Facturación & Finanzas":
     with col4:
         st.metric("Fondo de Reinversión", f"${fondo_reinversion:,.2f}")
     with col5:
-        st.metric("Gasto de Inversión y Envíos", f"-${total_gastos_inversion:,.2f}", delta_color="inverse")
+        st.metric("Gastos de Inversión / Envíos", f"-${total_gastos:,.2f}", delta_color="inverse")
+
+    st.markdown("---")
+
+    # 2. Inversión Total (Stock Actual + Agotado / Vendido)
+    st.subheader("📦 Inversión Total (Stock Actual + Agotado / Vendido)")
+    col_inv1, col_inv2 = st.columns(2)
+    with col_inv1:
+        st.metric("Inversión Total en USDT", f"${inversion_usdt:,.2f} USDT")
+    with col_inv2:
+        st.metric("Inversión Total en BCV", f"${inversion_bcv:,.2f} BCV")
+
+    st.markdown("---")
+
+    # 3. Monto Total a Recaudar Global (Vendido + Todo el Stock Actual)
+    st.subheader("💵 Monto Total a Recaudar Global (Vendido + Todo el Stock Actual)")
+    col_rec1, col_rec2 = st.columns(2)
+    with col_rec1:
+        st.metric("Monto Total a Recaudar (USDT)", f"${monto_recaudar_usdt:,.2f} USDT")
+    with col_rec2:
+        st.metric("Monto Total a Recaudar (BCV)", f"${monto_recaudar_bcv:,.2f} BCV")
 
     st.markdown("---")
     st.subheader("📋 Listado de Ventas Registradas")
