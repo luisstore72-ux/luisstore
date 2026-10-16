@@ -657,8 +657,27 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
             with col3:
                 st.write("**Detalle de Cuotas:**")
-                for c in v.get("detalle_cuotas", []):
+                for idx_c, c in enumerate(v.get("detalle_cuotas", [])):
                     st.write(f"• Cuota #{c['nro']}: ${c['monto_estimado']:.2f} USDT - {'✅ Pagada' if c['pagada'] else '❌ Pendiente'}")
+                    if not c['pagada']:
+                        if st.button(f"💵 Registrar Pago Cuota #{c['nro']} (Venta #{v['id_venta']})", key=f"btn_pago_cuota_{v['id_venta']}_{idx_c}"):
+                            c['pagada'] = True
+                            c['monto_pagado'] = c['monto_estimado']
+                            c['monto_pagado_bcv'] = c['monto_estimado'] # Ajuste si aplica BCV
+                            
+                            # Actualizar en Firebase las cuotas y sumar a Binance
+                            actualizar_venta_cloud(v['id_doc'], v)
+                            
+                            binance_data["saldo_actual"] += c['monto_estimado']
+                            binance_data["movimientos"].append({
+                                "fecha": str(date.today()),
+                                "tipo": "Entrada USDT (Abono Cuota)",
+                                "monto": c['monto_estimado'],
+                                "descripcion": f"Pago Cuota #{c['nro']} - Venta #{v['id_venta']} ({v.get('cliente', '')})"
+                            })
+                            guardar_binance_cloud(binance_data)
+                            st.success(f"✅ ¡Cuota #{c['nro']} de la venta #{v['id_venta']} registrada como pagada y sumada a Binance!")
+                            st.rerun()
 
 # ---------------------------------------------------------
 # 7. HISTORIAL, FACTURACIÓN & FINANZAS
@@ -666,12 +685,15 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
 elif menu == "📊 Historial, Facturación & Finanzas":
     st.subheader("📊 Resumen Financiero General y Métricas Cloud")
 
+    # Cálculo del Gasto de Reinversión y Envíos basado en las salidas registradas en Binance
+    gastos_reinversion_envios = sum(abs(m.get('monto', 0)) for m in binance_data.get("movimientos", []) if m.get('monto', 0) < 0 or "Salida" in m.get('tipo', ''))
+
     venta_total_usdt = sum(v.get('total_venta_usdt', 0) for v in ventas)
     venta_total_bcv = sum(v.get('total_venta_bcv', 0) for v in ventas)
     ganancias_totales = sum(v.get('ganancia_usdt', 0) for v in ventas)
     fondo_reinversion = sum(v.get('reinversion_usdt', 0) for v in ventas)
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("Venta Total ($ USDT)", f"${venta_total_usdt:,.2f}")
     with col2:
@@ -680,6 +702,8 @@ elif menu == "📊 Historial, Facturación & Finanzas":
         st.metric("Ganancias Totales", f"${ganancias_totales:,.2f}")
     with col4:
         st.metric("Fondo de Reinversión", f"${fondo_reinversion:,.2f}")
+    with col5:
+        st.metric("Gasto Reinversión y Envíos", f"-${gastos_reinversion_envios:,.2f}")
 
     st.markdown("---")
     st.subheader("📋 Listado de Ventas Registradas")
