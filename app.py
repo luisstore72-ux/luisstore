@@ -655,6 +655,10 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 total_bcv_ref = v.get('total_venta_bcv', 0)
                 st.write(f"**Prenda(s):** {v['producto']}")
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
+            with col3:
+                st.write("**Detalle de Cuotas:**")
+                for c in v.get("detalle_cuotas", []):
+                    st.write(f"• Cuota #{c['nro']}: ${c['monto_estimado']:.2f} USDT - {'✅ Pagada' if c['pagada'] else '❌ Pendiente'}")
 
 # ---------------------------------------------------------
 # 7. HISTORIAL, FACTURACIÓN & FINANZAS
