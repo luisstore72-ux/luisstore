@@ -109,7 +109,7 @@ if 'carrito_ventas' not in st.session_state:
 # Configuración de la página web
 st.set_page_config(page_title="LUIS STORE | Control & Ventas Cloud", layout="wide")
 
-# Estilos CSS con diseño de factura elegante y tarjetas financieras
+# Estilos CSS con diseño de factura elegante
 st.markdown("""
     <style>
         .invoice-card {
@@ -657,32 +657,32 @@ elif menu == "📋 Cuentas por Cobrar (Cuotas)":
                 st.write(f"**Total Venta:** ${total_bcv_ref:.2f} a BCV")
 
 # ---------------------------------------------------------
-# 7. HISTORIAL, FACTURACIÓN & FINANZAS (CON TARJETA DE GASTOS)
+# 7. HISTORIAL, FACTURACIÓN & FINANZAS
 # ---------------------------------------------------------
 elif menu == "📊 Historial, Facturación & Finanzas":
     st.subheader("📊 Resumen Financiero General y Métricas Cloud")
 
-    # Cálculo automático de gastos (suma de salidas registradas en el historial de Binance)
-    total_gastado_usdt = sum(abs(m['monto']) for m in binance_data.get("movimientos", []) if m['monto'] < 0 or "Salida" in m.get('tipo', ''))
-    
-    # Cálculo de métricas generales a partir de las ventas registradas
+    # Suma de egresos/gastos registrados en el historial de Binance
+    total_gastos_inversion = sum(abs(m['monto']) for m in binance_data.get("movimientos", []) if m.get('monto', 0) < 0 or "Salida" in m.get('tipo', ''))
+
+    # Métricas generales tomadas del registro de ventas
     venta_total_usdt = sum(v.get('total_venta_usdt', 0) for v in ventas)
     venta_total_bcv = sum(v.get('total_venta_bcv', 0) for v in ventas)
-    ganancia_total = sum(v.get('ganancia_usdt', 0) for v in ventas)
+    ganancias_totales = sum(v.get('ganancia_usdt', 0) for v in ventas)
     fondo_reinversion = sum(v.get('reinversion_usdt', 0) for v in ventas)
 
-    # Filas de tarjetas financieras superiores (con la tarjeta de Gastos al lado de Fondo de Reinversión)
+    # Filas de tarjetas financieras con la nueva tarjeta de Gastos al lado de Fondo de Reinversión
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("Venta Total ($ USDT)", f"${venta_total_usdt:,.2f}")
     with col2:
         st.metric("Venta Total ($ a BCV)", f"${venta_total_bcv:,.2f}")
     with col3:
-        st.metric("Ganancias Totales", f"${ganancia_total:,.2f}")
+        st.metric("Ganancias Totales", f"${ganancias_totales:,.2f}")
     with col4:
         st.metric("Fondo de Reinversión", f"${fondo_reinversion:,.2f}")
     with col5:
-        st.metric("Gastos de Inversión / Envíos", f"-${total_gastado_usdt:,.2f}", delta_color="inverse")
+        st.metric("Gasto de Inversión y Envíos", f"-${total_gastos_inversion:,.2f}", delta_color="inverse")
 
     st.markdown("---")
     st.subheader("📋 Listado de Ventas Registradas")
